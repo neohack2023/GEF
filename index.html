@@ -3,446 +3,117 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>GEF Sandbox Compiler v2.3 - Safe Bootstrap</title>
-<style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    background: #050505;
-    color: #fff;
-    overflow: hidden;
-    font-family: system-ui, sans-serif;
-  }
-
-  canvas {
-    position: absolute;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    display: block;
-  }
-
-  #main-canvas-2d {
-    z-index: 1;
-  }
-
-  #ui-layer {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    z-index: 20;
-    width: 380px;
-    max-height: calc(100vh - 40px);
-    overflow: auto;
-    background: rgba(10,10,15,.88);
-    border: 1px solid rgba(255,255,255,.10);
-    border-radius: 16px;
-    padding: 18px;
-    box-sizing: border-box;
-    backdrop-filter: blur(16px);
-  }
-
-  h1 {
-    margin: 0 0 4px 0;
-    font-size: 1.45rem;
-    font-weight: 800;
-    background: linear-gradient(90deg,#00ff88,#00b8ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  .subtitle {
-    margin: 0 0 14px 0;
-    color: #9ca3af;
-    font-size: .78rem;
-  }
-
-  .section-title {
-    margin: 15px 0 8px 0;
-    font-size: .7rem;
-    color: #00ff88;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  .flex-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 10px;
-  }
-
-  .flex-row > * {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .btn-small {
-    padding: 7px 10px;
-    font-size: .74rem;
-    font-weight: 700;
-    background: rgba(255,255,255,.08);
-    color: #fff;
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,.12);
-    cursor: pointer;
-  }
-
-  .btn-small:hover {
-    background: rgba(255,255,255,.15);
-  }
-
-  input[type="file"] {
-    display: none;
-  }
-
-  .meters {
-    margin: 12px 0 14px 0;
-    background: rgba(0,0,0,.36);
-    border: 1px solid rgba(255,255,255,.05);
-    border-radius: 10px;
-    padding: 10px;
-  }
-
-  .meter-row {
-    display: flex;
-    align-items: center;
-    font-size: .65rem;
-    color: #cfcfcf;
-    margin-bottom: 6px;
-  }
-
-  .meter-label {
-    width: 54px;
-    font-weight: 700;
-  }
-
-  .meter-track {
-    flex: 1;
-    height: 6px;
-    background: #222;
-    border-radius: 999px;
-    margin-left: 10px;
-    overflow: hidden;
-  }
-
-  .meter-fill {
-    height: 100%;
-    width: 0%;
-    transition: width .05s linear;
-  }
-
-  #fill-bass { background: #ff416c; }
-  #fill-mid { background: #00ff88; }
-  #fill-treble { background: #00b8ff; }
-  #fill-glitch { background: #f7b733; }
-  #fill-centroid { background: #a855f7; }
-
-  .slider-group {
-    margin-bottom: 9px;
-  }
-
-  .slider-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2px;
-    font-size: .71rem;
-    color: #aaa;
-  }
-
-  .slider-val {
-    color: #00ff88;
-    font-family: ui-monospace, monospace;
-  }
-
-  input[type="range"] {
-    width: 100%;
-  }
-
-  textarea {
-    width: 100%;
-    min-height: 130px;
-    resize: vertical;
-    box-sizing: border-box;
-    background: rgba(0,0,0,.58);
-    color: #00ff88;
-    border: 1px solid rgba(255,255,255,.1);
-    border-radius: 10px;
-    padding: 12px;
-    font-family: ui-monospace, monospace;
-    font-size: .79rem;
-  }
-
-  #status-bar {
-    position: absolute;
-    left: 50%;
-    bottom: 20px;
-    transform: translateX(-50%);
-    z-index: 30;
-    pointer-events: none;
-    padding: 8px 16px;
-    border-radius: 999px;
-    background: rgba(0,0,0,.78);
-    color: #00ff88;
-    border: 1px solid rgba(0,255,136,.32);
-    backdrop-filter: blur(4px);
-    font-size: .75rem;
-  }
-
-  .tiny-note {
-    font-size: .65rem;
-    color: #8d8d8d;
-    line-height: 1.35;
-  }
-</style>
+<title>GEF Sandbox Compiler v2.3</title>
+<link rel="stylesheet" href="./src/styles.css" />
 </head>
 <body>
 <div id="ui-layer">
   <h1>GEF Engine</h1>
-  <p class="subtitle">Bicameral Architectural Runtime - Safe Bootstrap</p>
+  <p class="subtitle">Bicameral Architectural Runtime</p>
 
-  <div class="flex-row">
-    <label for="media-upload" class="btn-small" style="display:flex;align-items:center;justify-content:center;">Load Track</label>
-    <input type="file" id="media-upload" accept="audio/*,video/mp4,video/webm" />
-    <button id="btn-mic" class="btn-small">Microphone</button>
+  <div class="tabs">
+    <div class="tab active" id="tab-studio">Compiler</div>
+    <div class="tab" id="tab-autopilot">Foundry</div>
+    <div class="tab" id="tab-library">Library</div>
   </div>
 
-  <div class="meters">
-    <div class="meter-row"><div class="meter-label">BASS</div><div class="meter-track"><div id="fill-bass" class="meter-fill"></div></div></div>
-    <div class="meter-row"><div class="meter-label">MID</div><div class="meter-track"><div id="fill-mid" class="meter-fill"></div></div></div>
-    <div class="meter-row"><div class="meter-label">TREBLE</div><div class="meter-track"><div id="fill-treble" class="meter-fill"></div></div></div>
-    <div class="meter-row"><div class="meter-label" style="color:#f7b733;">GLITCH</div><div class="meter-track"><div id="fill-glitch" class="meter-fill"></div></div></div>
-    <div class="meter-row"><div class="meter-label" style="color:#a855f7;">CENT</div><div class="meter-track"><div id="fill-centroid" class="meter-fill"></div></div></div>
+  <div id="view-studio" class="view-section active">
+    <div class="flex-row">
+      <label for="media-upload" class="btn-small" style="display:flex;align-items:center;justify-content:center;">Load Track</label>
+      <input type="file" id="media-upload" accept="audio/*,video/mp4,video/webm" />
+      <button id="btn-mic" class="btn-small">Microphone</button>
+    </div>
+
+    <div id="playback-controls" style="display:none;margin-top:10px;">
+      <div class="flex-row" style="margin-bottom:5px;">
+        <button id="btn-play" class="btn-small">Play</button>
+        <button id="btn-pause" class="btn-small">Pause</button>
+        <button id="btn-stop" class="btn-small">Stop</button>
+      </div>
+      <div class="flex-row">
+        <button id="btn-record" class="btn-small" style="background:rgba(255,65,108,.2);border:1px solid #ff416c;">Record</button>
+        <button id="btn-snapshot" class="btn-small">Snapshot</button>
+      </div>
+    </div>
+
+    <div class="meters">
+      <div class="meter-row"><div class="meter-label">BASS</div><div class="meter-track"><div id="fill-bass" class="meter-fill"></div></div></div>
+      <div class="meter-row"><div class="meter-label">MID</div><div class="meter-track"><div id="fill-mid" class="meter-fill"></div></div></div>
+      <div class="meter-row"><div class="meter-label">TREB</div><div class="meter-track"><div id="fill-treble" class="meter-fill"></div></div></div>
+      <div class="meter-row"><div class="meter-label" style="color:#f7b733;">GLITCH</div><div class="meter-track"><div id="fill-glitch" class="meter-fill"></div></div></div>
+      <div class="meter-row"><div class="meter-label" style="color:#a855f7;">CENT</div><div class="meter-track"><div id="fill-centroid" class="meter-fill"></div></div></div>
+    </div>
+
+    <div class="slider-group"><div class="slider-header"><span>Time Speed</span><span id="val-speed" class="slider-val">1.0</span></div><input id="sl-speed" type="range" min="-2" max="5" step="0.1" value="1.0" /></div>
+    <div class="slider-group"><div class="slider-header"><span>Glitch Threshold</span><span id="val-glitch" class="slider-val">1.5</span></div><input id="sl-glitch" type="range" min="0.1" max="5" step="0.1" value="1.5" /></div>
+    <div class="slider-group"><div class="slider-header"><span>Audio Sense</span><span id="val-audio-sense" class="slider-val">1.0</span></div><input id="sl-audio-sense" type="range" min="0" max="3" step="0.05" value="1.0" /></div>
+
+    <div class="section-title">Main Engine Adapter Lanes</div>
+    <div class="theme-grid">
+      <label class="theme-label"><input class="format-radio" type="radio" name="format" value="wgsl" /> WGSL</label>
+      <label class="theme-label"><input class="format-radio" type="radio" name="format" value="glsl" /> GLSL</label>
+      <label class="theme-label"><input class="format-radio" type="radio" name="format" value="js" checked /> JS</label>
+      <label class="theme-label"><input class="format-radio" type="radio" name="format" value="python" /> Python</label>
+    </div>
+
+    <div class="sandbox-panel" id="sandbox-container">
+      <div class="sandbox-header">
+        <label style="font-size:.8rem;color:#f7b733;font-weight:800;display:flex;gap:8px;align-items:center;cursor:pointer;"><input id="sandbox-toggle" type="checkbox" style="accent-color:#f7b733;width:16px;height:16px;"> SANDBOX RUNTIME</label>
+        <button id="panic-btn" class="btn-small btn-panic" style="display:none;">PANIC</button>
+      </div>
+      <div class="tiny-note" style="margin-bottom:10px;">Safe preview lane for curated modules and future adapter work.</div>
+      <div class="flex-row" style="margin-bottom:8px;"><select id="sandbox-preview-mode" style="margin:0;"><option value="AUTO" selected>Preview Mode: Auto</option><option value="STACK">Preview Mode: Stack Only</option><option value="REPLACE">Preview Mode: Force Base Replace</option></select></div>
+      <div class="flex-row"><button id="promote-sandbox-btn" class="btn-small btn-good" style="display:none;">Commit to Main</button><button id="discard-sandbox-btn" class="btn-small" style="display:none;">Discard</button></div>
+      <div id="diagnostics-log" style="display:none;"><div class="diag-info">Sandbox initialized.</div></div>
+    </div>
+
+    <div class="section-title">Global Render Pipeline <span id="pipeline-summary" style="color:#6b7280;font-size:.62rem;">0 modules</span></div>
+    <div id="module-stack-container"><div style="color:#666;font-size:.72rem;text-align:center;padding:8px;">Pipeline empty.</div></div>
+
+    <div class="section-title">Mutation Forge</div>
+    <textarea id="director-prompt" placeholder="Describe the visual mutation or full base replacement..."></textarea>
+    <div class="flex-row"><select id="evo-stage" style="margin:0;"><option value="PRE_BASE">Pre-Base</option><option value="BASE" selected>Replace Base</option><option value="OVERLAY">Stack Overlay</option><option value="POST_FX">Post FX Pass</option><option value="FEEDBACK_PASS">Feedback Loop</option><option value="UI_OVERLAY">UI Overlay</option></select></div>
+    <div class="flex-row"><button id="evolve-btn" class="btn btn-ai" style="margin:0;">Evolve</button><button id="iterate-btn" class="btn btn-ai" style="margin:0;background:linear-gradient(135deg,#f7b733,#fc4a1a);color:#000;">Iterate</button></div>
+
+    <div id="feedback-section" style="display:none;margin-top:10px;padding:12px;background:rgba(0,0,0,.4);border-radius:10px;border:1px solid rgba(255,255,255,.05);">
+      <div class="section-title" style="margin-top:0;">Training Feedback</div>
+      <button id="btn-like" class="btn-small btn-good" style="width:100%;margin-bottom:8px;">Looks Good</button>
+      <div style="display:flex;flex-direction:column;gap:6px;"><input id="dislike-reason" type="text" placeholder="Why did it fail?" /><button id="btn-dislike" class="btn-small btn-panic" style="width:100%;">Reject & Log</button></div>
+    </div>
+
+    <div class="flex-row" style="margin-top:14px;"><button id="toggle-code-btn" class="btn-small" style="background:rgba(0,184,255,.18);color:#00b8ff;border:1px solid rgba(0,184,255,.4);">Open IDE</button><button id="hide-ui-btn" class="btn-small">Hide UI</button></div>
+    <div class="hint">Tap background to restore UI</div>
   </div>
 
-  <div class="slider-group">
-    <div class="slider-header"><span>Time Speed</span><span id="val-speed" class="slider-val">1.0</span></div>
-    <input id="sl-speed" type="range" min="-2" max="5" step="0.1" value="1.0" />
+  <div id="view-autopilot" class="view-section">
+    <div class="section-title" style="margin-top:0;">Visual Foundry</div>
+    <div class="tiny-note warn-note" style="margin-bottom:10px;">Safe mode queues design notes and curated previews.</div>
+    <div class="flex-row" style="margin-bottom:8px;"><button id="btn-auto-ideas" class="btn-small btn-magic" style="width:100%;">Auto-Generate Seed Ideas</button></div>
+    <textarea id="autopilot-seeds" placeholder="Enter your visual direction, theme, or overarching concept here..." style="min-height:120px;"></textarea>
+    <div class="flex-row" style="margin-top:8px;align-items:center;"><button id="btn-run-one" class="btn-small btn-good" style="color:#000;background:#00ff88;flex:1.5;">Run One</button><div style="display:flex;flex:3;gap:4px;align-items:center;"><input type="number" id="autopilot-batch-count" title="Batch Runs" value="5" min="2" max="100" style="width:50px;padding:6px;margin:0;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.48);color:#fff;font-size:.8rem;text-align:center;"><button id="btn-run-batch" class="btn-small btn-ai" style="flex:1;">Run Batch</button></div><button id="btn-stop-batch" class="btn-small btn-panic" style="flex:1;">Stop</button></div>
+    <div class="section-title" style="margin-top:16px;">Foundry Logs</div>
+    <div id="autopilot-log" style="max-height:280px;overflow:auto;background:rgba(0,0,0,.36);border:1px solid rgba(255,255,255,.05);border-radius:10px;padding:10px;"><div style="color:#666;font-size:.72rem;text-align:center;">No logs yet.</div></div>
   </div>
 
-  <div class="slider-group">
-    <div class="slider-header"><span>Glitch Threshold</span><span id="val-glitch" class="slider-val">1.5</span></div>
-    <input id="sl-glitch" type="range" min="0.1" max="5" step="0.1" value="1.5" />
+  <div id="view-library" class="view-section">
+    <div class="section-title" style="margin-top:0;">Save Architecture Preset</div>
+    <div class="flex-row"><input id="preset-name" type="text" placeholder="Name your pipeline..." style="margin:0;"><button id="save-btn" class="btn-small btn-good" style="color:#000;background:#00ff88;">Save Local</button></div>
+    <div class="section-title">Local Library</div>
+    <div id="local-list" style="max-height:240px;overflow:auto;margin-bottom:15px;"><div style="text-align:center;color:#666;font-size:.8rem;">No local saves yet.</div></div>
+    <div style="padding:10px;background:rgba(0,0,0,.4);border-radius:10px;border:1px solid rgba(255,255,255,.05);"><div class="section-title" style="margin-top:0;">ML Telemetry Dataset</div><div style="font-size:.7rem;color:#a0a0a0;margin-bottom:10px;display:flex;justify-content:space-between;"><span>Events Logged:</span><span id="dataset-count" style="color:#00b8ff;font-weight:800;">0</span></div><div class="flex-row"><button id="btn-import-lora" class="btn-small btn-good">Import (.jsonl)</button><button id="btn-export-lora" class="btn-small" style="background:rgba(0,184,255,.14);color:#00b8ff;border-color:rgba(0,184,255,.35);">Export (.jsonl)</button></div><input id="dataset-upload" type="file" accept=".jsonl" /><div class="tiny-note" style="margin-top:8px;">Feedback memory for future pattern bias.</div></div>
   </div>
-
-  <div class="slider-group">
-    <div class="slider-header"><span>Audio Sense</span><span id="val-audio-sense" class="slider-val">1.0</span></div>
-    <input id="sl-audio-sense" type="range" min="0" max="3" step="0.05" value="1.0" />
-  </div>
-
-  <div class="section-title">GEF Module Notes</div>
-  <textarea id="module-notes" spellcheck="false">// GEF v2.3 safe bootstrap
-// Core audio-reactive canvas runtime is active.
-// External AI Autopilot and generated-code execution are intentionally not bundled in this safe entry commit.
-// Recommended split:
-// src/audio/analyzer.js
-// src/render/canvasRuntime.js
-// src/autopilot/client.js
-// src/sandbox/compiler.js</textarea>
-
-  <p class="tiny-note">This entry point boots the visual engine and audio metrics. The larger Autopilot Forge should be split into modules before re-adding remote AI generation and dynamic compiler execution.</p>
 </div>
 
-<div id="status-bar">GEF Safe Engine Waking Up...</div>
+<div id="code-layer" class="hidden"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px;border-bottom:1px solid rgba(255,255,255,.1);"><h3 id="code-title" style="margin:0;color:#00b8ff;font-size:1rem;">Source Architecture</h3><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;"><select id="code-format" style="width:auto;margin:0;padding:5px 7px;"><option value="wgsl">WGSL</option><option value="glsl">GLSL</option><option value="js" selected>JS Canvas</option><option value="python">Python</option></select><button id="apply-code-btn" class="btn-small btn-ai">Preview to Sandbox</button><button id="apply-main-base-btn" class="btn-small btn-good">Refresh Main Base</button><button id="close-code-btn" class="btn-small">X</button></div></div><textarea id="code-viewer" spellcheck="false" placeholder="// Adapter preview notes..."></textarea></div>
+
+<div id="status-bar">Engines Waking Up...</div>
+<canvas id="gpu-canvas" style="display:none;"></canvas>
+<canvas id="glsl-canvas" style="display:none;"></canvas>
 <canvas id="main-canvas-2d"></canvas>
+<canvas id="sandbox-canvas"></canvas>
+<canvas id="feedback-buffer"></canvas>
+<canvas id="composite-canvas"></canvas>
 <audio id="media-player" crossorigin="anonymous" style="display:none;"></audio>
-
-<script type="module">
-const $ = (id) => document.getElementById(id);
-const canvas = $('main-canvas-2d');
-const ctx = canvas.getContext('2d');
-const statusBar = $('status-bar');
-
-let globalTime = 0;
-let lastFrameTime = performance.now();
-
-class AudioAnalyzer {
-  constructor() {
-    this.ctx = null;
-    this.analyser = null;
-    this.dataArray = null;
-    this.prevDataArray = null;
-    this.source = null;
-    this.metrics = { bass:0, mid:0, treble:0, beat:0, glitch:0, centroid:0, rms:0 };
-    this.energyHist = new Array(30).fill(0);
-    this.histIdx = 0;
-  }
-
-  async init() {
-    if (!this.ctx) {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-      this.analyser = this.ctx.createAnalyser();
-      this.analyser.fftSize = 1024;
-      this.analyser.smoothingTimeConstant = 0.1;
-      this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-      this.prevDataArray = new Uint8Array(this.analyser.frequencyBinCount);
-    }
-    if (this.ctx.state === 'suspended') await this.ctx.resume();
-  }
-
-  route(sourceNode, isMic = false) {
-    try { if (this.source) this.source.disconnect(); } catch {}
-    try { this.analyser.disconnect(); } catch {}
-    this.source = sourceNode;
-    this.source.connect(this.analyser);
-    if (!isMic) this.analyser.connect(this.ctx.destination);
-  }
-
-  update(glitchThreshold, audioSense) {
-    if (!this.analyser) return this.metrics;
-    this.analyser.getByteFrequencyData(this.dataArray);
-
-    let b = 0, m = 0, t = 0, flux = 0, centNum = 0, centDen = 0, rmsSum = 0;
-
-    for (let i = 0; i < this.dataArray.length; i++) {
-      const val = (this.dataArray[i] / 255) * audioSense;
-      if (i < 10) b += val;
-      else if (i < 70) m += val;
-      else if (i < 200) t += val;
-
-      const prev = this.prevDataArray[i] / 255;
-      if (val > prev) flux += val - prev;
-      centNum += val * i;
-      centDen += val;
-      rmsSum += val * val;
-    }
-
-    b /= 10;
-    m /= 60;
-    t /= 130;
-
-    const x = this.metrics;
-    x.bass += (b > x.bass ? 0.8 : 0.08) * (b - x.bass);
-    x.mid += (m > x.mid ? 0.8 : 0.08) * (m - x.mid);
-    x.treble += (t > x.treble ? 0.8 : 0.08) * (t - x.treble);
-
-    const c = centDen > 0 ? (centNum / centDen) / this.dataArray.length : 0;
-    x.centroid += (c > x.centroid ? 0.5 : 0.1) * (c - x.centroid);
-
-    const r = Math.sqrt(rmsSum / this.dataArray.length);
-    x.rms += (r > x.rms ? 0.8 : 0.08) * (r - x.rms);
-
-    const avg = this.energyHist.reduce((a, v) => a + v, 0) / this.energyHist.length;
-    x.beat = (b > avg * 1.4 && b > 0.2) ? 1 : x.beat * 0.8;
-
-    this.energyHist[this.histIdx] = b;
-    this.histIdx = (this.histIdx + 1) % this.energyHist.length;
-
-    x.glitch = flux > glitchThreshold ? 1 : x.glitch * 0.8;
-    this.prevDataArray.set(this.dataArray);
-    return x;
-  }
-}
-
-const audio = new AudioAnalyzer();
-
-function bindSliderValue(sliderId, labelId) {
-  const s = $(sliderId);
-  const l = $(labelId);
-  const sync = () => {
-    l.textContent = Number(s.value).toFixed(2).replace(/\.00$/, '.0').replace(/(\.\d)0$/, '$1');
-  };
-  s.addEventListener('input', sync);
-  sync();
-}
-
-bindSliderValue('sl-speed', 'val-speed');
-bindSliderValue('sl-glitch', 'val-glitch');
-bindSliderValue('sl-audio-sense', 'val-audio-sense');
-
-$('media-upload').onchange = async (event) => {
-  const file = event.target.files?.[0];
-  if (!file) return;
-  await audio.init();
-  const mediaPlayer = $('media-player');
-  mediaPlayer.src = URL.createObjectURL(file);
-  audio.route(audio.ctx.createMediaElementSource(mediaPlayer), false);
-  await mediaPlayer.play();
-  statusBar.textContent = `Loaded media: ${file.name}`;
-};
-
-$('btn-mic').onclick = async () => {
-  await audio.init();
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audio.route(audio.ctx.createMediaStreamSource(stream), true);
-    statusBar.textContent = 'Microphone input active.';
-  } catch {
-    statusBar.textContent = 'Microphone access denied.';
-  }
-};
-
-function drawVoidCore(metrics, w, h, time) {
-  ctx.fillStyle = 'rgba(5,5,8,0.18)';
-  ctx.fillRect(0,0,w,h);
-
-  const cx = w * 0.5;
-  const cy = h * 0.5;
-  const rings = 9;
-
-  for (let i = rings; i >= 0; i--) {
-    const t = i / Math.max(rings, 1);
-    const radius = 50 + t * Math.min(w, h) * 0.42 + metrics.bass * 160 + Math.sin(time * (1 + t)) * 18;
-    const wobbleX = Math.sin(time * 2.0 + i) * metrics.glitch * 28;
-    const wobbleY = Math.cos(time * 1.3 + i) * metrics.mid * 22;
-
-    ctx.beginPath();
-    ctx.arc(cx + wobbleX, cy + wobbleY, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(${40 + metrics.centroid * 255}, ${150 + t * 80}, 255, ${0.05 + t * 0.08})`;
-    ctx.lineWidth = 1 + t * 4;
-    ctx.stroke();
-  }
-
-  if (metrics.beat > 0.5) {
-    ctx.fillStyle = `rgba(0,255,136,${0.08 + metrics.beat * 0.22})`;
-    ctx.fillRect(0,0,w,h);
-  }
-
-  if (metrics.glitch > 0.35) {
-    const slices = 8;
-    for (let i = 0; i < slices; i++) {
-      const y = Math.random() * h;
-      const sliceH = 4 + Math.random() * 18;
-      const dx = (Math.random() - 0.5) * metrics.glitch * 55;
-      ctx.drawImage(canvas, 0, y, w, sliceH, dx, y, w, sliceH);
-    }
-  }
-}
-
-function render() {
-  const now = performance.now();
-  const dt = (now - lastFrameTime) / 1000;
-  lastFrameTime = now;
-
-  const speed = parseFloat($('sl-speed').value);
-  const glitchThreshold = parseFloat($('sl-glitch').value);
-  const audioSense = parseFloat($('sl-audio-sense').value);
-  globalTime += dt * speed;
-
-  const metrics = audio.update(glitchThreshold, audioSense);
-
-  $('fill-bass').style.width = `${Math.min(metrics.bass * 100, 100)}%`;
-  $('fill-mid').style.width = `${Math.min(metrics.mid * 100, 100)}%`;
-  $('fill-treble').style.width = `${Math.min(metrics.treble * 100, 100)}%`;
-  $('fill-glitch').style.width = `${Math.min(metrics.glitch * 100, 100)}%`;
-  $('fill-centroid').style.width = `${Math.min(metrics.centroid * 1000, 100)}%`;
-
-  const w = innerWidth;
-  const h = innerHeight;
-  if (canvas.width !== w || canvas.height !== h) {
-    canvas.width = w;
-    canvas.height = h;
-  }
-
-  drawVoidCore(metrics, w, h, globalTime);
-  requestAnimationFrame(render);
-}
-
-requestAnimationFrame(render);
-statusBar.textContent = 'GEF safe engine active.';
-</script>
+<script type="module" src="./src/app.js"></script>
 </body>
 </html>
