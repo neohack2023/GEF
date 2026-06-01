@@ -1,0 +1,2131 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GEF Sandbox Compiler v2.3 - Autopilot Forge</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #050505; color: #fff; overflow: hidden;
+    font-family: system-ui, sans-serif;
+  }
+  canvas { position: absolute; inset: 0; width: 100vw; height: 100vh; display:block; }
+  #gpu-canvas, #glsl-canvas { z-index: 0; }
+  #main-canvas-2d { z-index: 1; pointer-events:none; }
+  #sandbox-canvas { z-index: 2; pointer-events:none; mix-blend-mode: screen; }
+  #composite-canvas, #feedback-buffer { display:none; }
+
+  #ui-layer {
+    position:absolute; top:20px; left:20px; z-index:20;
+    width:380px; max-height:calc(100vh - 40px); overflow:auto;
+    background:rgba(10,10,15,.88);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:16px;
+    padding:18px;
+    box-sizing:border-box;
+    backdrop-filter: blur(16px);
+    transition:.25s ease;
+  }
+  #ui-layer.hidden { opacity:0; transform:translateX(-18px); pointer-events:none; }
+  #ui-layer::-webkit-scrollbar { width: 6px; }
+  #ui-layer::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius:999px; }
+
+  h1 {
+    margin:0 0 4px 0; font-size:1.45rem; font-weight:800;
+    background: linear-gradient(90deg,#00ff88,#00b8ff);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .subtitle { margin:0 0 14px 0; color:#9ca3af; font-size:.78rem; }
+  .section-title {
+    margin:15px 0 8px 0; font-size:.7rem; color:#00ff88;
+    text-transform:uppercase; letter-spacing:1px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .flex-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .flex-row > * { flex:1; min-width:0; }
+
+  .tabs {
+    display:flex; margin-bottom:14px;
+    border-bottom:1px solid rgba(255,255,255,.1);
+  }
+  .tab {
+    flex:1; text-align:center; padding:8px; cursor:pointer;
+    color:#666; font-size:.8rem; font-weight:700; text-transform:uppercase;
+    transition:.2s;
+  }
+  .tab.active { color:#00ff88; border-bottom:2px solid #00ff88; }
+  .view-section { display:none; }
+  .view-section.active { display:block; }
+
+  .btn {
+    display:block; width:100%; box-sizing:border-box;
+    padding:10px; border-radius:8px; cursor:pointer;
+    border:1px solid rgba(255,255,255,.18);
+    font-size:.84rem; font-weight:700; text-transform:uppercase;
+    color:#fff; background:linear-gradient(135deg,#4A00E0,#8E2DE2);
+    transition:.18s;
+    text-align:center;
+  }
+  .btn:hover { transform:translateY(-1px); box-shadow:0 5px 14px rgba(142,45,226,.28); }
+  .btn-small {
+    padding:7px 10px; font-size:.74rem; font-weight:700;
+    background:rgba(255,255,255,.08); color:#fff; border-radius:8px;
+    border:1px solid rgba(255,255,255,.12); cursor:pointer;
+  }
+  .btn-small:hover { background:rgba(255,255,255,.15); }
+  .btn-ai { background:linear-gradient(135deg,#FF416C,#FF4B2B); }
+  .btn-good { background:rgba(0,255,136,.14); color:#00ff88; border-color:rgba(0,255,136,.45); }
+  .btn-panic { background:rgba(255,65,108,.14); color:#ff416c; border-color:#ff416c; }
+  .btn-magic { background:rgba(168,85,247,.14); color:#a855f7; border-color:rgba(168,85,247,.45); }
+
+  select, textarea, input[type="text"] {
+    width:100%; box-sizing:border-box;
+    background:rgba(0,0,0,.48); color:#fff;
+    border:1px solid rgba(255,255,255,.18);
+    border-radius:7px; outline:none; padding:8px;
+    font-size:.8rem;
+  }
+  textarea { resize:vertical; min-height:70px; font-family:inherit; }
+  input[type="file"] { display:none; }
+
+  .meters {
+    margin:12px 0 14px 0;
+    background:rgba(0,0,0,.36);
+    border:1px solid rgba(255,255,255,.05);
+    border-radius:10px; padding:10px;
+  }
+  .meter-row { display:flex; align-items:center; font-size:.65rem; color:#cfcfcf; margin-bottom:6px; }
+  .meter-label { width:46px; font-weight:700; }
+  .meter-track { flex:1; height:6px; background:#222; border-radius:999px; margin-left:10px; overflow:hidden; }
+  .meter-fill { height:100%; width:0%; transition:width .05s linear; }
+  #fill-bass { background:#ff416c; }
+  #fill-mid { background:#00ff88; }
+  #fill-treble { background:#00b8ff; }
+  #fill-glitch { background:#f7b733; }
+  #fill-centroid { background:#a855f7; }
+
+  .slider-group { margin-bottom:9px; }
+  .slider-header {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:2px; font-size:.71rem; color:#aaa;
+  }
+  .slider-val { color:#00ff88; font-family:ui-monospace, monospace; }
+  input[type="range"] {
+    -webkit-appearance:none; appearance:none;
+    width:100%; background:transparent; margin:0;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height:4px; background:rgba(255,255,255,.1); border-radius:999px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance:none; appearance:none;
+    width:12px; height:12px; border-radius:50%;
+    margin-top:-4px; cursor:pointer; background:#00ff88;
+    box-shadow:0 0 8px rgba(0,255,136,.5);
+  }
+
+  .theme-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; }
+  .theme-label {
+    font-size:.66rem; color:#d1d5db;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:6px; padding:6px; display:flex; align-items:center; gap:6px;
+  }
+  .theme-label input { accent-color:#00ff88; }
+
+  .sandbox-panel {
+    margin-bottom:14px; padding:12px;
+    border-radius:10px;
+    border:1px solid rgba(247,183,51,.38);
+    background:rgba(247,183,51,.05);
+    transition:.18s;
+  }
+  .sandbox-panel.active {
+    background:rgba(247,183,51,.14);
+    box-shadow:0 0 18px rgba(247,183,51,.15);
+    border-color:#f7b733;
+  }
+  .sandbox-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom:8px; margin-bottom:8px;
+    border-bottom:1px solid rgba(247,183,51,.18);
+  }
+
+  #diagnostics-log {
+    max-height:110px; overflow:auto;
+    margin-top:8px; padding:8px; border-radius:8px;
+    background:rgba(0,0,0,.82);
+    border:1px solid rgba(255,255,255,.1);
+    font-family:ui-monospace, monospace; font-size:.65rem; color:#aaa;
+  }
+  .diag-info { color:#00b8ff; margin-bottom:4px; }
+  .diag-warn { color:#f7b733; margin-bottom:4px; }
+  .diag-err { color:#ff416c; margin-bottom:4px; }
+
+  #module-stack-container {
+    max-height:220px; overflow:auto;
+    background:rgba(0,0,0,.36);
+    border:1px solid rgba(255,255,255,.05);
+    border-radius:10px; padding:6px; margin-bottom:10px;
+  }
+  .module-row {
+    display:flex; align-items:center; gap:6px;
+    margin-bottom:6px; padding:7px; border-radius:7px;
+    background:rgba(255,255,255,.05);
+    border-left:3px solid #00ff88;
+  }
+  .module-row.broken { border-left-color:#ff416c; background:rgba(255,65,108,.1); }
+  .module-row.sandbox-only { border-left-color:#f7b733; background:rgba(247,183,51,.06); }
+  .module-row.base-mod { border-left-color:#00b8ff; }
+  .stage-badge, .runtime-badge {
+    font-size:.54rem; letter-spacing:.4px; text-transform:uppercase;
+    padding:2px 5px; border-radius:4px; text-align:center; white-space:nowrap;
+    background:rgba(255,255,255,.1); color:#fff;
+  }
+  .runtime-badge { background:rgba(0,184,255,.18); color:#8de4ff; }
+
+  .community-card {
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:8px; padding:10px; margin-bottom:8px;
+  }
+  .cc-title { font-size:.84rem; font-weight:800; }
+  .cc-author { font-size:.7rem; color:#00ff88; }
+
+  #code-layer {
+    position:absolute; top:20px; right:20px; bottom:20px; z-index:20;
+    width:min(580px, calc(100vw - 440px));
+    min-width:420px;
+    display:flex; flex-direction:column;
+    background:rgba(10,10,15,.95);
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:16px;
+    backdrop-filter: blur(12px);
+    box-shadow:-10px 0 40px rgba(0,0,0,.45);
+    transition:.25s ease;
+  }
+  #code-layer.hidden { opacity:0; transform:translateX(20px); pointer-events:none; }
+  #code-viewer {
+    flex:1; margin:0 15px 15px 15px; resize:none;
+    background:rgba(0,0,0,.58); color:#00ff88;
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:10px; padding:12px;
+    font-family:ui-monospace, monospace; font-size:.79rem;
+    white-space:pre; overflow:auto;
+  }
+
+  #status-bar {
+    position:absolute; left:50%; bottom:20px; transform:translateX(-50%);
+    z-index:30; pointer-events:none;
+    padding:8px 16px; border-radius:999px;
+    background:rgba(0,0,0,.78); color:#00ff88;
+    border:1px solid rgba(0,255,136,.32);
+    backdrop-filter: blur(4px);
+    font-size:.75rem;
+    transition:.25s;
+  }
+  #status-bar.sandbox-active {
+    color:#f7b733; border-color:rgba(247,183,51,.45);
+    box-shadow:0 0 12px rgba(247,183,51,.16);
+  }
+
+  .hint { margin-top:14px; font-size:.74rem; color:#666; text-align:center; font-style:italic; }
+  .tiny-note { font-size:.65rem; color:#8d8d8d; line-height:1.35; }
+</style>
+</head>
+<body>
+
+<div id="ui-layer">
+  <h1>GEF Engine</h1>
+  <p class="subtitle">Bicameral Architectural Runtime</p>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-studio">Compiler</div>
+    <div class="tab" id="tab-autopilot">Autopilot</div>
+    <div class="tab" id="tab-library">Library</div>
+  </div>
+
+  <div id="view-studio" class="view-section active">
+    <div class="flex-row">
+      <label for="media-upload" class="btn-small" style="display:flex;align-items:center;justify-content:center;">Load Track</label>
+      <input type="file" id="media-upload" accept="audio/*,video/mp4,video/webm" />
+      <button id="btn-mic" class="btn-small">Microphone</button>
+    </div>
+
+    <div id="playback-controls" style="display:none; margin-top:10px;">
+      <div class="flex-row" style="margin-bottom:5px;">
+        <button id="btn-play" class="btn-small">Play</button>
+        <button id="btn-pause" class="btn-small">Pause</button>
+        <button id="btn-stop" class="btn-small">Stop</button>
+      </div>
+      <div class="flex-row">
+        <button id="btn-record" class="btn-small" style="background:rgba(255,65,108,.2);border:1px solid #ff416c;">Record</button>
+        <button id="btn-snapshot" class="btn-small">Snapshot</button>
+      </div>
+    </div>
+
+    <div class="meters">
+      <div class="meter-row"><div class="meter-label">BASS</div><div class="meter-track"><div id="fill-bass" class="meter-fill"></div></div></div>
+      <div class="meter-row"><div class="meter-label">MID</div><div class="meter-track"><div id="fill-mid" class="meter-fill"></div></div></div>
+      <div class="meter-row"><div class="meter-label">TREB</div><div class="meter-track"><div id="fill-treble" class="meter-fill"></div></div></div>
+      <div class="meter-row"><div class="meter-label" style="color:#f7b733;">GLITCH</div><div class="meter-track"><div id="fill-glitch" class="meter-fill"></div></div></div>
+      <div class="meter-row"><div class="meter-label" style="color:#a855f7;">CENT</div><div class="meter-track"><div id="fill-centroid" class="meter-fill"></div></div></div>
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-header"><span>Time Speed</span><span id="val-speed" class="slider-val">1.0</span></div>
+      <input id="sl-speed" type="range" min="-2" max="5" step="0.1" value="1.0" />
+    </div>
+    <div class="slider-group">
+      <div class="slider-header"><span>Glitch Threshold</span><span id="val-glitch" class="slider-val">1.5</span></div>
+      <input id="sl-glitch" type="range" min="0.1" max="5" step="0.1" value="1.5" />
+    </div>
+    <div class="slider-group">
+      <div class="slider-header"><span>Audio Sense</span><span id="val-audio-sense" class="slider-val">1.0</span></div>
+      <input id="sl-audio-sense" type="range" min="0" max="3" step="0.05" value="1.0" />
+    </div>
+
+    <div class="section-title">Main Engine (Stable Base)</div>
+    <div class="theme-grid">
+      <label class="theme-label"><input class="format-radio" type="radio" name="format" value="wgsl" checked /> WGSL</label>
+      <label class="theme-label"><input class="format-radio" type="radio" name="format" value="glsl" /> GLSL</label>
+      <label class="theme-label"><input class="format-radio" type="radio" name="format" value="js" /> JS</label>
+      <label class="theme-label"><input class="format-radio" type="radio" name="format" value="python" /> Python</label>
+    </div>
+
+    <div class="sandbox-panel" id="sandbox-container">
+      <div class="sandbox-header">
+        <label style="font-size:.8rem;color:#f7b733;font-weight:800;display:flex;gap:8px;align-items:center;cursor:pointer;">
+          <input id="sandbox-toggle" type="checkbox" style="accent-color:#f7b733;width:16px;height:16px;">
+          SANDBOX RUNTIME
+        </label>
+        <button id="panic-btn" class="btn-small btn-panic" style="display:none;">PANIC</button>
+      </div>
+
+      <div class="tiny-note" style="margin-bottom:10px;">
+        Rapid prototype lane for modules and full base swaps. When a sandbox <b>BASE</b> module exists, it can completely replace the visible base before commit.
+      </div>
+
+      <div class="flex-row" style="margin-bottom:8px;">
+        <select id="sandbox-preview-mode" style="margin:0;">
+          <option value="AUTO" selected>Preview Mode: Auto</option>
+          <option value="STACK">Preview Mode: Stack Only</option>
+          <option value="REPLACE">Preview Mode: Force Base Replace</option>
+        </select>
+      </div>
+
+      <div class="flex-row">
+        <button id="promote-sandbox-btn" class="btn-small btn-good" style="display:none;">Commit to Main</button>
+        <button id="discard-sandbox-btn" class="btn-small" style="display:none;">Discard</button>
+      </div>
+
+      <div id="diagnostics-log" style="display:none;">
+        <div class="diag-info">Sandbox initialized.</div>
+      </div>
+    </div>
+
+    <div class="section-title">Global Render Pipeline <span id="pipeline-summary" style="color:#6b7280;font-size:.62rem;">0 modules</span></div>
+    <div id="module-stack-container">
+      <div style="color:#666;font-size:.72rem;text-align:center;padding:8px;">Pipeline empty.</div>
+    </div>
+
+    <div class="section-title">AI Mutation Forge</div>
+    <textarea id="director-prompt" placeholder="Describe the visual mutation or full base replacement..."></textarea>
+    <div class="flex-row">
+      <select id="evo-stage" style="margin:0;">
+        <option value="PRE_BASE">Pre-Base</option>
+        <option value="BASE" selected>Replace Base</option>
+        <option value="OVERLAY">Stack Overlay</option>
+        <option value="POST_FX">Post FX Pass</option>
+        <option value="FEEDBACK_PASS">Feedback Loop</option>
+        <option value="UI_OVERLAY">UI Overlay</option>
+      </select>
+    </div>
+    <div class="flex-row">
+      <button id="evolve-btn" class="btn btn-ai" style="margin:0;">Evolve</button>
+      <button id="iterate-btn" class="btn btn-ai" style="margin:0;background:linear-gradient(135deg,#f7b733,#fc4a1a);color:#000;">Iterate</button>
+    </div>
+
+    <div id="feedback-section" style="display:none; margin-top:10px; padding:12px; background:rgba(0,0,0,.4); border-radius:10px; border:1px solid rgba(255,255,255,.05);">
+      <div class="section-title" style="margin-top:0;">AI Training Feedback</div>
+      <button id="btn-like" class="btn-small btn-good" style="width:100%; margin-bottom:8px;">👍 Looks Good</button>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <input id="dislike-reason" type="text" placeholder="Why did it fail?" />
+        <button id="btn-dislike" class="btn-small btn-panic" style="width:100%;">👎 Reject & Auto-Reroll</button>
+      </div>
+    </div>
+
+    <div class="flex-row" style="margin-top:14px;">
+      <button id="toggle-code-btn" class="btn-small" style="background:rgba(0,184,255,.18);color:#00b8ff;border:1px solid rgba(0,184,255,.4);">Open IDE</button>
+      <button id="hide-ui-btn" class="btn-small">Hide UI</button>
+    </div>
+
+    <div class="hint">Tap background to restore UI</div>
+  </div>
+
+  <div id="view-autopilot" class="view-section">
+    <div class="section-title" style="margin-top:0;">Autopilot Visual Foundry</div>
+    <div class="tiny-note" style="margin-bottom:10px;">
+      Automated sequence generation, advanced visual coding, smoke-testing, and AI repair. Prompts can be entered manually or generated procedurally.
+    </div>
+    
+    <div class="flex-row" style="margin-bottom:8px;">
+      <button id="btn-auto-ideas" class="btn-small btn-magic" style="width:100%;">✨ Auto-Generate Seed Ideas</button>
+    </div>
+    
+    <textarea id="autopilot-seeds" placeholder="Enter your complete visual direction, theme, or overarching concept here... The entire text block will be used as context." style="min-height:120px;"></textarea>
+    
+    <div class="flex-row" style="margin-top:8px; align-items:center;">
+      <button id="btn-run-one" class="btn-small btn-good" style="color:#000;background:#00ff88; flex:1.5;">Run One</button>
+      <div style="display:flex; flex:3; gap:4px; align-items:center;">
+        <input type="number" id="autopilot-batch-count" title="Batch Runs" value="5" min="2" max="100" style="width:50px; padding:6px; margin:0; border-radius:8px; border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.48); color:#fff; font-size:.8rem; text-align:center;">
+        <button id="btn-run-batch" class="btn-small btn-ai" style="flex:1;">Run Batch</button>
+      </div>
+      <button id="btn-stop-batch" class="btn-small btn-panic" style="flex:1;">Stop</button>
+    </div>
+
+    <div class="section-title" style="margin-top:16px;">Foundry Logs</div>
+    <div id="autopilot-log" style="max-height:280px; overflow:auto; background:rgba(0,0,0,.36); border:1px solid rgba(255,255,255,.05); border-radius:10px; padding:10px;">
+      <div style="color:#666;font-size:.72rem;text-align:center;">No logs yet.</div>
+    </div>
+  </div>
+
+  <div id="view-library" class="view-section">
+    <div class="section-title" style="margin-top:0;">Save Architecture Preset</div>
+    <div class="flex-row">
+      <input id="preset-name" type="text" placeholder="Name your pipeline..." style="margin:0;">
+      <button id="save-btn" class="btn-small btn-good" style="color:#000;background:#00ff88;">Save Local</button>
+    </div>
+
+    <div class="section-title">Local Library</div>
+    <div id="local-list" style="max-height:240px; overflow:auto; margin-bottom:15px;">
+      <div style="text-align:center; color:#666; font-size:.8rem;">No local saves yet.</div>
+    </div>
+
+    <div style="padding:10px; background:rgba(0,0,0,.4); border-radius:10px; border:1px solid rgba(255,255,255,.05);">
+      <div class="section-title" style="margin-top:0;">ML Telemetry Dataset</div>
+      <div style="font-size:.7rem; color:#a0a0a0; margin-bottom:10px; display:flex; justify-content:space-between;">
+        <span>Events Logged:</span>
+        <span id="dataset-count" style="color:#00b8ff; font-weight:800;">0</span>
+      </div>
+      <div class="flex-row">
+        <button id="btn-import-lora" class="btn-small btn-good">Import (.jsonl)</button>
+        <button id="btn-export-lora" class="btn-small" style="background:rgba(0,184,255,.14); color:#00b8ff; border-color:rgba(0,184,255,.35);">Export (.jsonl)</button>
+      </div>
+      <input id="dataset-upload" type="file" accept=".jsonl" />
+      <div class="tiny-note" style="margin-top:8px;">Feedback memory for future pattern bias.</div>
+    </div>
+  </div>
+</div>
+
+<div id="code-layer" class="hidden">
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:15px; border-bottom:1px solid rgba(255,255,255,.1);">
+    <h3 id="code-title" style="margin:0; color:#00b8ff; font-size:1rem;">Source Architecture</h3>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+      <select id="code-format" style="width:auto; margin:0; padding:5px 7px;">
+        <option value="wgsl">WGSL</option>
+        <option value="glsl">GLSL</option>
+        <option value="js" selected>JS Canvas</option>
+        <option value="python">Python</option>
+      </select>
+      <button id="apply-code-btn" class="btn-small btn-ai">Compile to Sandbox</button>
+      <button id="apply-main-base-btn" class="btn-small btn-good">Compile to Main Base</button>
+      <button id="close-code-btn" class="btn-small">✕</button>
+    </div>
+  </div>
+  <textarea id="code-viewer" spellcheck="false" placeholder="// Write or generate logic here..."></textarea>
+</div>
+
+<div id="status-bar">Engines Waking Up...</div>
+
+<canvas id="gpu-canvas"></canvas>
+<canvas id="glsl-canvas" style="display:none;"></canvas>
+<canvas id="main-canvas-2d" style="display:none;"></canvas>
+<canvas id="sandbox-canvas"></canvas>
+<canvas id="feedback-buffer"></canvas>
+<canvas id="composite-canvas"></canvas>
+
+<audio id="media-player" crossorigin="anonymous" style="display:none;"></audio>
+
+<script type="module">
+const apiKey = "";
+
+const STAGES = {
+  PRE_BASE:     { id:'PRE_BASE', order:10, desc:'Transforms before base draw' },
+  BASE:         { id:'BASE', order:20, desc:'Primary visual generator / replacement' },
+  OVERLAY:      { id:'OVERLAY', order:30, desc:'Standard additive layers' },
+  FEEDBACK_PASS:{ id:'FEEDBACK_PASS', order:40, desc:'Recursive feedback from prior frame' },
+  POST_FX:      { id:'POST_FX', order:50, desc:'Pixel manipulation and datamosh passes' },
+  UI_OVERLAY:   { id:'UI_OVERLAY', order:60, desc:'Text or HUD overlays' }
+};
+
+const FORMATS = { JS:'js', WGSL:'wgsl', GLSL:'glsl', PYTHON:'python' };
+
+const $ = (id) => document.getElementById(id);
+const statusBar = $('status-bar');
+
+const ui = {
+  uiLayer: $('ui-layer'),
+  codeLayer: $('code-layer'),
+  sandboxCanvas: $('sandbox-canvas'),
+  pipelineSummary: $('pipeline-summary'),
+  feedbackSection: $('feedback-section')
+};
+
+let telemetryDataset = JSON.parse(localStorage.getItem('gef_telemetry_dataset') || '[]');
+$('dataset-count').innerText = telemetryDataset.length;
+let likedFragments = [];
+let rejectedFragments = [];
+const sessionId = crypto.randomUUID();
+let currentRunId = null;
+let pyodideInstance = null;
+let isRecording = false;
+
+function setStatus(text, sandbox = false, timeout = 0) {
+  statusBar.textContent = text;
+  statusBar.className = sandbox ? 'sandbox-active' : '';
+  if (timeout > 0) {
+    setTimeout(() => {
+      statusBar.textContent = Sandbox.isActive ? 'SANDBOX RUNTIME ACTIVE' : 'STABLE ENGINE ACTIVE';
+      statusBar.className = Sandbox.isActive ? 'sandbox-active' : '';
+    }, timeout);
+  }
+}
+
+function logTelemetry(eventType, payload = {}) {
+  const rec = {
+    timestamp: new Date().toISOString(),
+    session_id: sessionId,
+    run_id: currentRunId,
+    event_type: eventType,
+    ...payload
+  };
+  telemetryDataset.push(rec);
+  localStorage.setItem('gef_telemetry_dataset', JSON.stringify(telemetryDataset));
+  $('dataset-count').innerText = telemetryDataset.length;
+}
+
+class AudioAnalyzer {
+  constructor() {
+    this.ctx = null;
+    this.analyser = null;
+    this.streamDestination = null;
+    this.dataArray = null;
+    this.prevDataArray = null;
+    this.source = null;
+    this.metrics = { bass:0, mid:0, treble:0, beat:0, glitch:0, centroid:0, rms:0 };
+    this.energyHist = new Array(30).fill(0);
+    this.histIdx = 0;
+  }
+
+  async init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.analyser = this.ctx.createAnalyser();
+      this.analyser.fftSize = 1024;
+      this.analyser.smoothingTimeConstant = 0.1;
+      this.streamDestination = this.ctx.createMediaStreamDestination();
+      this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+      this.prevDataArray = new Uint8Array(this.analyser.frequencyBinCount);
+    }
+    if (this.ctx.state === 'suspended') await this.ctx.resume();
+  }
+
+  route(sourceNode, isMic = false) {
+    try { if (this.source) this.source.disconnect(); } catch {}
+    try { this.analyser.disconnect(); } catch {}
+    this.source = sourceNode;
+    this.source.connect(this.analyser);
+    this.analyser.connect(this.streamDestination);
+    if (!isMic) this.analyser.connect(this.ctx.destination);
+  }
+
+  update(glitchThreshold, audioSense) {
+    if (!this.analyser) return this.metrics;
+    this.analyser.getByteFrequencyData(this.dataArray);
+
+    let b=0, m=0, t=0, flux=0, centNum=0, centDen=0, rmsSum=0;
+    for (let i = 0; i < this.dataArray.length; i++) {
+      const val = (this.dataArray[i] / 255) * audioSense;
+      if (i < 10) b += val;
+      else if (i < 70) m += val;
+      else if (i < 200) t += val;
+
+      const prev = this.prevDataArray[i] / 255;
+      if (val > prev) flux += (val - prev);
+      centNum += val * i;
+      centDen += val;
+      rmsSum += val * val;
+    }
+
+    b /= 10; m /= 60; t /= 130;
+    const x = this.metrics;
+    x.bass += (b > x.bass ? 0.8 : 0.08) * (b - x.bass);
+    x.mid += (m > x.mid ? 0.8 : 0.08) * (m - x.mid);
+    x.treble += (t > x.treble ? 0.8 : 0.08) * (t - x.treble);
+
+    const c = centDen > 0 ? (centNum / centDen) / this.dataArray.length : 0;
+    x.centroid += (c > x.centroid ? 0.5 : 0.1) * (c - x.centroid);
+
+    const r = Math.sqrt(rmsSum / this.dataArray.length);
+    x.rms += (r > x.rms ? 0.8 : 0.08) * (r - x.rms);
+
+    const avg = this.energyHist.reduce((a,v)=>a+v,0) / this.energyHist.length;
+    x.beat = (b > avg * 1.4 && b > 0.2) ? 1 : x.beat * 0.8;
+
+    this.energyHist[this.histIdx] = b;
+    this.histIdx = (this.histIdx + 1) % this.energyHist.length;
+
+    x.glitch = flux > glitchThreshold ? 1 : x.glitch * 0.8;
+
+    this.prevDataArray.set(this.dataArray);
+    return x;
+  }
+}
+const SharedAudio = new AudioAnalyzer();
+
+class GefModule {
+  constructor(config = {}) {
+    this.id = config.id || crypto.randomUUID();
+    this.name = config.name || 'Untitled Module';
+    this.format = config.format || FORMATS.JS;
+    this.stage = config.stage || STAGES.OVERLAY.id;
+    this.blendMode = config.blendMode || 'source-over';
+    this.opacity = config.opacity ?? 1;
+    this.enabled = config.enabled ?? true;
+    this.code = config.code || '';
+    this.error = null;
+    this.compiledFn = null;
+    this.isSandboxOnly = config.isSandboxOnly ?? true;
+  }
+
+  compile() {
+    try {
+      if (this.format !== FORMATS.JS) {
+        this.error = 'Only JS modules can compile into staged modules.';
+        return false;
+      }
+      this.compiledFn = new Function('ctx','w','h','time','audio','fbCtx', `"use strict";\n${this.code}`);
+      this.error = null;
+      return true;
+    } catch (e) {
+      this.error = e.message;
+      return false;
+    }
+  }
+
+  execute(ctx, w, h, time, audio, fbCtx) {
+    if (!this.enabled || this.error || !this.compiledFn) return;
+    ctx.save();
+    try {
+      ctx.globalCompositeOperation = this.blendMode;
+      ctx.globalAlpha = this.opacity;
+      this.compiledFn(ctx, w, h, time, audio, fbCtx);
+    } catch (e) {
+      throw new Error(e.message);
+    } finally {
+      ctx.restore();
+    }
+  }
+
+  toJSON() {
+    return {
+      id: this.id,
+      name: this.name,
+      format: this.format,
+      stage: this.stage,
+      blendMode: this.blendMode,
+      opacity: this.opacity,
+      enabled: this.enabled,
+      code: this.code
+    };
+  }
+}
+
+class BaseRuntime {
+  constructor(name) {
+    this.name = name;
+    this.modules = [];
+  }
+  getModulesByStage(stageId) {
+    return this.modules
+      .filter(m => m.stage === stageId)
+      .sort((a, b) => STAGES[a.stage].order - STAGES[b.stage].order);
+  }
+  getBaseModule() {
+    return this.modules.find(m => m.stage === STAGES.BASE.id && m.enabled && !m.error) || null;
+  }
+  removeModule(id) {
+    this.modules = this.modules.filter(m => m.id !== id);
+  }
+}
+
+class MainRuntime extends BaseRuntime {
+  constructor() {
+    super('Stable Engine');
+    this.baseFormat = FORMATS.WGSL;
+    this.baseCode = '';
+
+    this.gpuCanvas = $('gpu-canvas');
+    this.glslCanvas = $('glsl-canvas');
+    this.canvas2d = $('main-canvas-2d');
+    this.ctx2d = this.canvas2d.getContext('2d');
+
+    this.gl = this.glslCanvas.getContext('webgl');
+    this.glBuffer = this.gl ? this.gl.createBuffer() : null;
+    if (this.gl) {
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.glBuffer);
+      this.gl.bufferData(
+        this.gl.ARRAY_BUFFER,
+        new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]),
+        this.gl.STATIC_DRAW
+      );
+    }
+
+    this.device = null;
+    this.format_gpu = null;
+    this.uniformBuffer = null;
+    this.wgslPipeline = null;
+    this.glslProgram = null;
+    this.jsBaseFn = null;
+    this.pyCode = null;
+  }
+
+  async initWebGPU() {
+    if (!navigator.gpu) return;
+    try {
+      const adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) throw new Error('No WebGPU adapter.');
+      this.device = await adapter.requestDevice();
+      this.format_gpu = navigator.gpu.getPreferredCanvasFormat();
+      this.gpuCanvas.getContext('webgpu').configure({
+        device: this.device,
+        format: this.format_gpu,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC
+      });
+      this.uniformBuffer = this.device.createBuffer({
+        size: 64,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+      });
+    } catch (e) {
+      console.warn('WebGPU init failed:', e);
+    }
+  }
+}
+
+class SandboxRuntime extends BaseRuntime {
+  constructor() {
+    super('Sandbox Compiler');
+    this.isActive = false;
+    this.isPanic = false;
+    this.diagnostics = [];
+    this.canvas = $('sandbox-canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.fbCanvas = $('feedback-buffer');
+    this.fbCtx = this.fbCanvas.getContext('2d', { willReadFrequently:true });
+  }
+
+  hasBaseOverride() {
+    return !!this.getBaseModule();
+  }
+
+  log(msg, type = 'diag-info') {
+    this.diagnostics.push({
+      time: new Date().toLocaleTimeString().split(' ')[0],
+      msg, type
+    });
+    if (this.diagnostics.length > 60) this.diagnostics.shift();
+    this.updateDiagnosticsUI();
+  }
+
+  updateDiagnosticsUI() {
+    $('diagnostics-log').innerHTML = this.diagnostics
+      .map(d => `<div class="${d.type}">[${d.time}] ${d.msg}</div>`)
+      .join('');
+    $('diagnostics-log').scrollTop = $('diagnostics-log').scrollHeight;
+  }
+
+  panic() {
+    this.isPanic = true;
+    this.modules = [];
+    this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
+    this.fbCtx.clearRect(0,0,this.fbCanvas.width,this.fbCanvas.height);
+    this.log('PANIC reset triggered. Sandbox stack cleared.', 'diag-err');
+    updateUI();
+    setTimeout(() => { this.isPanic = false; }, 400);
+  }
+
+  previewModeResolved() {
+    const mode = $('sandbox-preview-mode').value;
+    if (mode === 'STACK') return 'STACK';
+    if (mode === 'REPLACE') return 'REPLACE';
+    return this.hasBaseOverride() ? 'REPLACE' : 'STACK';
+  }
+
+  render(w, h, time, audio) {
+    if (!this.isActive || this.isPanic) return;
+    if (this.canvas.width !== w || this.canvas.height !== h) {
+      this.canvas.width = w; this.canvas.height = h;
+    }
+    if (this.fbCanvas.width !== w || this.fbCanvas.height !== h) {
+      this.fbCanvas.width = w; this.fbCanvas.height = h;
+    }
+
+    const previewMode = this.previewModeResolved();
+    this.ctx.clearRect(0,0,w,h);
+
+    if (previewMode === 'REPLACE') {
+      this.ctx.globalCompositeOperation = 'source-over';
+    }
+
+    const stageList = Object.values(STAGES).sort((a,b)=>a.order-b.order);
+    for (const stage of stageList) {
+      const mods = this.getModulesByStage(stage.id);
+      for (const mod of mods) {
+        try {
+          if (previewMode === 'STACK' && stage.id === STAGES.BASE.id) {
+            // In stack mode, sandbox BASE still draws on top but won't force full replacement behavior.
+          }
+          mod.execute(this.ctx, w, h, time, audio, this.fbCtx);
+        } catch (e) {
+          mod.error = e.message;
+          mod.enabled = false;
+          this.log(`[${mod.name}] crashed: ${e.message}`, 'diag-err');
+          updateUI();
+        }
+      }
+      if (stage.id === STAGES.OVERLAY.id || stage.id === STAGES.BASE.id) {
+        this.fbCtx.clearRect(0,0,w,h);
+        this.fbCtx.drawImage(this.canvas, 0, 0);
+      }
+    }
+
+    ui.sandboxCanvas.style.mixBlendMode = previewMode === 'REPLACE' ? 'normal' : 'screen';
+  }
+}
+
+const Main = new MainRuntime();
+const Sandbox = new SandboxRuntime();
+
+let globalTime = 0;
+let lastFrameTime = performance.now();
+
+const baseCodes = {
+wgsl: `// NAME: WGSL Void Core
+struct Uniforms {
+  res: vec2<f32>,
+  time: f32,
+  audio_sense: f32,
+  speed: f32,
+  bass: f32,
+  mid: f32,
+  treble: f32,
+  beat: f32,
+  glitch: f32,
+  centroid: f32,
+  rms: f32,
+  pad1: f32,
+  pad2: f32,
+  pad3: f32,
+  pad4: f32
+};
+@group(0) @binding(0) var<uniform> u: Uniforms;
+struct VSOut { @builtin(position) pos: vec4<f32>, @location(0) uv: vec2<f32> };
+
+@vertex
+fn vs_main(@builtin(vertex_index) vIdx: u32) -> VSOut {
+  var pos = array<vec2<f32>, 6>(
+    vec2<f32>(-1.0,-1.0), vec2<f32>(1.0,-1.0), vec2<f32>(-1.0,1.0),
+    vec2<f32>(-1.0,1.0), vec2<f32>(1.0,-1.0), vec2<f32>(1.0,1.0)
+  );
+  var out: VSOut;
+  out.pos = vec4<f32>(pos[vIdx], 0.0, 1.0);
+  out.uv = pos[vIdx] * 0.5 + 0.5;
+  out.uv.y = 1.0 - out.uv.y;
+  return out;
+}
+
+@fragment
+fn fs_main(in: VSOut) -> @location(0) vec4<f32> {
+  var uv = (in.pos.xy * 2.0 - u.res) / min(u.res.x, u.res.y);
+  let pulse = sin(length(uv) * 9.0 - u.time * u.speed);
+  let ring = pulse * (0.12 + u.bass * u.audio_sense);
+  uv.x += u.glitch * 0.08 * sin(uv.y * 40.0 + u.time * 8.0);
+  let vignette = 1.0 - smoothstep(0.2, 1.35, length(uv));
+  return vec4<f32>(
+    0.12 + ring + u.mid * 0.2,
+    0.18 + vignette * 0.5 + u.centroid * 0.8,
+    0.25 + u.treble * 0.7 + u.beat * 0.5,
+    1.0
+  );
+}`,
+glsl: `// NAME: GLSL Void
+precision highp float;
+uniform vec2 resolution;
+uniform float time;
+uniform float audio_sense;
+uniform float speed;
+uniform float bass;
+uniform float mid;
+uniform float treble;
+uniform float beat;
+uniform float glitch;
+uniform float centroid;
+uniform float rms;
+
+void main() {
+  vec2 uv = (gl_FragCoord.xy * 2.0 - resolution) / min(resolution.x, resolution.y);
+  uv.x += glitch * 0.08 * sin(uv.y * 40.0 + time * 8.0);
+  float pulse = sin(length(uv) * 9.0 - time * speed);
+  float ring = pulse * (0.12 + bass * audio_sense);
+  float vignette = 1.0 - smoothstep(0.2, 1.35, length(uv));
+  gl_FragColor = vec4(
+    0.12 + ring + mid * 0.2,
+    0.18 + vignette * 0.5 + centroid * 0.8,
+    0.25 + treble * 0.7 + beat * 0.5,
+    1.0
+  );
+}`,
+js: `// NAME: JS Canvas Void
+ctx.fillStyle = 'rgba(5,5,8,0.18)';
+ctx.fillRect(0,0,w,h);
+
+const cx = w * 0.5;
+const cy = h * 0.5;
+const rings = 6;
+for (let i = rings; i >= 0; i--) {
+  const t = i / Math.max(rings, 1);
+  const r = 60 + t * 280 + audio.bass * 140 + Math.sin(time * (1 + t)) * 16;
+  ctx.beginPath();
+  ctx.arc(
+    cx + Math.sin(time * 2.0 + i) * audio.glitch * 24,
+    cy + Math.cos(time * 1.3 + i) * audio.mid * 18,
+    r,
+    0,
+    Math.PI * 2
+  );
+  ctx.strokeStyle = \`rgba(\${40 + audio.centroid * 255}, \${150 + t * 80}, 255, \${0.06 + t * 0.08})\`;
+  ctx.lineWidth = 1 + t * 4;
+  ctx.stroke();
+}
+ctx.fillStyle = \`rgba(0,255,136,\${0.08 + audio.beat * 0.25})\`;
+ctx.fillRect(0,0,w,h);`,
+python: `# NAME: Python Pyodide Void
+import math
+
+def render_frame():
+    ctx.fillStyle = "rgba(5,5,8,0.18)"
+    ctx.fillRect(0,0,w,h)
+    cx, cy = w * 0.5, h * 0.5
+    for i in range(7):
+        t = i / 6.0
+        r = 60 + t * 280 + bass * 140 + math.sin(time * (1 + t)) * 16
+        ctx.beginPath()
+        ctx.arc(cx, cy, r, 0, math.pi * 2)
+        ctx.strokeStyle = f"rgba({int(40 + centroid * 255)}, {int(150 + t * 80)}, 255, {0.06 + t * 0.08})"
+        ctx.lineWidth = 1 + t * 4
+        ctx.stroke()
+`
+};
+
+function bindSliderValue(sliderId, labelId) {
+  const s = $(sliderId), l = $(labelId);
+  const sync = () => l.textContent = Number(s.value).toFixed(2).replace(/\.00$/, '.0').replace(/(\.\d)0$/, '$1');
+  s.addEventListener('input', sync);
+  sync();
+}
+bindSliderValue('sl-speed', 'val-speed');
+bindSliderValue('sl-glitch', 'val-glitch');
+bindSliderValue('sl-audio-sense', 'val-audio-sense');
+
+function toggleStudioTab(tabName) {
+  $('tab-studio').classList.toggle('active', tabName === 'studio');
+  $('tab-autopilot').classList.toggle('active', tabName === 'autopilot');
+  $('tab-library').classList.toggle('active', tabName === 'library');
+  $('view-studio').classList.toggle('active', tabName === 'studio');
+  $('view-autopilot').classList.toggle('active', tabName === 'autopilot');
+  $('view-library').classList.toggle('active', tabName === 'library');
+  
+  if (tabName === 'library') renderLocalPresets();
+  if (tabName === 'autopilot') renderAutopilotLog();
+}
+$('tab-studio').onclick = () => toggleStudioTab('studio');
+$('tab-autopilot').onclick = () => toggleStudioTab('autopilot');
+$('tab-library').onclick = () => toggleStudioTab('library');
+
+$('hide-ui-btn').onclick = () => ui.uiLayer.classList.add('hidden');
+document.body.addEventListener('click', (e) => {
+  if (!e.target.closest('#ui-layer') && !e.target.closest('#code-layer')) {
+    ui.uiLayer.classList.remove('hidden');
+  }
+});
+
+$('toggle-code-btn').onclick = () => ui.codeLayer.classList.remove('hidden');
+$('close-code-btn').onclick = () => ui.codeLayer.classList.add('hidden');
+
+function summarizePipeline() {
+  const all = [...Main.modules, ...Sandbox.modules];
+  ui.pipelineSummary.textContent = `${all.length} module${all.length === 1 ? '' : 's'}`;
+}
+
+function updateUI() {
+  const container = $('module-stack-container');
+  const rows = [];
+
+  for (const m of Main.modules) {
+    rows.push(renderModuleRow(m, 'MAIN'));
+  }
+  for (const m of Sandbox.modules) {
+    rows.push(renderModuleRow(m, 'SANDBOX'));
+  }
+
+  container.innerHTML = rows.join('') || `<div style="color:#666;font-size:.72rem;text-align:center;padding:8px;">Pipeline empty.</div>`;
+  const hasSandboxMods = Sandbox.modules.length > 0;
+  $('promote-sandbox-btn').style.display = (Sandbox.isActive && hasSandboxMods) ? 'block' : 'none';
+  $('discard-sandbox-btn').style.display = (Sandbox.isActive && hasSandboxMods) ? 'block' : 'none';
+  $('panic-btn').style.display = Sandbox.isActive ? 'block' : 'none';
+  $('diagnostics-log').style.display = Sandbox.isActive ? 'block' : 'none';
+  summarizePipeline();
+}
+
+function renderModuleRow(m, runtime) {
+  const classes = [
+    'module-row',
+    m.error ? 'broken' : '',
+    m.isSandboxOnly ? 'sandbox-only' : '',
+    m.stage === STAGES.BASE.id ? 'base-mod' : ''
+  ].join(' ');
+  return `
+    <div class="${classes}">
+      <input type="checkbox" ${m.enabled ? 'checked' : ''} onchange="window.toggleMod('${runtime}','${m.id}',this.checked)" style="accent-color:#00ff88;">
+      <span class="runtime-badge">${runtime}</span>
+      <span class="stage-badge">${m.stage.replace('_PASS','').replace('_',' ')}</span>
+      <span style="flex:1; font-size:.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#fff;">${m.name}</span>
+      <button onclick="window.removeMod('${runtime}','${m.id}')" style="background:transparent;border:none;color:#ff416c;cursor:pointer;">✕</button>
+    </div>
+  `;
+}
+
+window.toggleMod = (runtime, id, state) => {
+  const stack = runtime === 'SANDBOX' ? Sandbox.modules : Main.modules;
+  const mod = stack.find(m => m.id === id);
+  if (mod) mod.enabled = state;
+};
+
+window.removeMod = (runtime, id) => {
+  if (runtime === 'SANDBOX') {
+    Sandbox.removeModule(id);
+    Sandbox.log('Sandbox module removed.', 'diag-warn');
+  } else {
+    Main.removeModule(id);
+  }
+  updateUI();
+};
+
+const sbToggle = $('sandbox-toggle');
+const sbPanel = $('sandbox-container');
+sbToggle.onchange = (e) => {
+  Sandbox.isActive = e.target.checked;
+  sbPanel.classList.toggle('active', Sandbox.isActive);
+  setStatus(Sandbox.isActive ? 'SANDBOX RUNTIME ACTIVE' : 'STABLE ENGINE ACTIVE', Sandbox.isActive);
+  if (Sandbox.isActive) Sandbox.log('Switched to experimental runtime context.', 'diag-info');
+  else ui.codeLayer.classList.add('hidden');
+  updateUI();
+};
+
+$('panic-btn').onclick = () => Sandbox.panic();
+$('discard-sandbox-btn').onclick = () => {
+  Sandbox.modules = [];
+  Sandbox.log('Sandbox discarded.', 'diag-warn');
+  updateUI();
+};
+
+$('promote-sandbox-btn').onclick = async () => {
+  const valid = Sandbox.modules.filter(m => !m.error && m.enabled);
+  let promoted = 0;
+
+  for (const m of valid) {
+    const stable = new GefModule({ ...m, isSandboxOnly:false });
+    stable.compile();
+
+    if (stable.stage === STAGES.BASE.id && stable.format === FORMATS.JS) {
+      await compileBase(stable.code, FORMATS.JS);
+      promoted++;
+      continue;
+    }
+    if (stable.stage !== STAGES.BASE.id) {
+      Main.modules.push(stable);
+      promoted++;
+    }
+  }
+
+  Sandbox.modules = [];
+  sbToggle.checked = false;
+  sbToggle.dispatchEvent(new Event('change'));
+  setStatus(`Promoted ${promoted} item${promoted === 1 ? '' : 's'} to main.`, false, 2400);
+  updateUI();
+};
+
+document.querySelectorAll('.format-radio').forEach(radio => {
+  radio.addEventListener('change', async (e) => {
+    const format = e.target.value;
+    $('code-format').value = format;
+    $('code-viewer').value = baseCodes[format];
+    await compileBase(baseCodes[format], format);
+  });
+});
+
+async function compileBase(code, format) {
+  Main.baseFormat = format;
+  Main.baseCode = code;
+  try {
+    if (format === FORMATS.WGSL) {
+      if (!Main.device) throw new Error('WebGPU device not initialized.');
+      const module = Main.device.createShaderModule({ code });
+      Main.wgslPipeline = await Main.device.createRenderPipelineAsync({
+        layout:'auto',
+        vertex:{ module, entryPoint:'vs_main' },
+        fragment:{ module, entryPoint:'fs_main', targets:[{ format: Main.format_gpu }] },
+        primitive:{ topology:'triangle-list' }
+      });
+      Main.glslProgram = null; Main.jsBaseFn = null; Main.pyCode = null;
+    } else if (format === FORMATS.GLSL) {
+      if (!Main.gl) throw new Error('WebGL unavailable.');
+      const gl = Main.gl;
+      const vs = gl.createShader(gl.VERTEX_SHADER);
+      gl.shaderSource(vs, `attribute vec2 position; void main(){ gl_Position = vec4(position,0.0,1.0); }`);
+      gl.compileShader(vs);
+
+      const fs = gl.createShader(gl.FRAGMENT_SHADER);
+      gl.shaderSource(fs, code.includes('precision') ? code : `precision highp float;\n${code}`);
+      gl.compileShader(fs);
+      if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(fs));
+
+      const program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+
+      Main.glslProgram = program;
+      Main.wgslPipeline = null; Main.jsBaseFn = null; Main.pyCode = null;
+    } else if (format === FORMATS.JS) {
+      Main.jsBaseFn = new Function('ctx','w','h','time','audio', `"use strict";\n${code}`);
+      Main.wgslPipeline = null; Main.glslProgram = null; Main.pyCode = null;
+    } else if (format === FORMATS.PYTHON) {
+      if (!pyodideInstance) {
+        setStatus('Loading Pyodide...', false);
+        pyodideInstance = await loadPyodide();
+      }
+      Main.pyCode = code;
+      pyodideInstance.runPython(code);
+      Main.wgslPipeline = null; Main.glslProgram = null; Main.jsBaseFn = null;
+    }
+
+    setStatus(`${format.toUpperCase()} base compiled.`, false, 1700);
+    return true;
+  } catch (err) {
+    console.error(err);
+    setStatus(`${format.toUpperCase()} compile error.`, false, 2200);
+    return false;
+  }
+}
+
+function extractName(code, fallback = 'Custom Module') {
+  const m = code.match(/^(?:\/\/|#)\s*NAME:\s*(.+)$/m);
+  return m ? m[1].trim() : fallback;
+}
+
+$('apply-code-btn').onclick = () => {
+  const code = $('code-viewer').value;
+  const stage = $('evo-stage').value;
+  const format = $('code-format').value;
+
+  if (format !== FORMATS.JS) {
+    Sandbox.log('Non-JS staged modules are not supported. Use Compile to Main Base.', 'diag-warn');
+    return;
+  }
+
+  const mod = new GefModule({
+    name: extractName(code, 'Manual Sandbox Module'),
+    code,
+    stage,
+    format,
+    isSandboxOnly: true
+  });
+
+  if (!Sandbox.isActive) {
+    sbToggle.checked = true;
+    sbToggle.dispatchEvent(new Event('change'));
+  }
+
+  if (mod.compile()) {
+    if (stage === STAGES.BASE.id) Sandbox.modules = Sandbox.modules.filter(m => m.stage !== STAGES.BASE.id);
+    Sandbox.modules.push(mod);
+    Sandbox.log(`Injected [${mod.name}] into ${stage}.`, 'diag-info');
+  } else {
+    Sandbox.log(`Syntax error: ${mod.error}`, 'diag-err');
+  }
+  updateUI();
+};
+
+$('apply-main-base-btn').onclick = async () => {
+  const code = $('code-viewer').value;
+  const format = $('code-format').value;
+  const ok = await compileBase(code, format);
+  if (ok) {
+    ui.codeLayer.classList.add('hidden');
+    logTelemetry('MANUAL_MAIN_BASE_COMPILE', { format, code });
+  }
+};
+
+// Original UI-driven single evolution trigger
+async function triggerEvolution(isIteration = false) {
+  const promptStr = $('director-prompt').value || 'Random glitch aesthetics';
+  const stage = $('evo-stage').value;
+  setStatus('Gemini AI: Synthesizing logic...', Sandbox.isActive);
+  
+  // Use the advanced prompt generator now available via Autopilot logic
+  try {
+    const code = await generateVisualModuleFromPrompt(promptStr, stage);
+    $('code-format').value = 'js';
+    $('code-viewer').value = code;
+    $('apply-code-btn').click();
+    ui.feedbackSection.style.display = 'block';
+    logTelemetry('GENERATION_SUCCESS', { prompt: promptStr, stage, code, iteration: isIteration });
+    setStatus('AI synthesis complete.', Sandbox.isActive, 1700);
+  } catch (e) {
+    setStatus('API failed.', Sandbox.isActive, 1800);
+  }
+}
+
+$('evolve-btn').onclick = () => triggerEvolution(false);
+$('iterate-btn').onclick = () => triggerEvolution(true);
+
+$('btn-like').onclick = () => {
+  const code = $('code-viewer').value;
+  likedFragments.push(code);
+  if (likedFragments.length > 5) likedFragments.shift();
+  logTelemetry('USER_REWARD', { reason:'User liked generation' });
+  ui.feedbackSection.style.display = 'none';
+  setStatus('Pattern learned.', Sandbox.isActive, 1200);
+};
+
+$('btn-dislike').onclick = () => {
+  const code = $('code-viewer').value;
+  const reason = $('dislike-reason').value || 'Did not meet vision.';
+  rejectedFragments.push({ code, reason });
+  if (rejectedFragments.length > 5) rejectedFragments.shift();
+  $('dislike-reason').value = '';
+  logTelemetry('USER_PUNISHMENT', { reason });
+  triggerEvolution(true);
+};
+
+function renderLocalPresets() {
+  const listEl = $('local-list');
+  const presets = JSON.parse(localStorage.getItem('gef_local_presets') || '[]').sort((a,b)=>b.timestamp-a.timestamp);
+  if (!presets.length) {
+    listEl.innerHTML = `<div style="text-align:center;color:#666;font-size:.8rem;">No local saves yet.</div>`;
+    return;
+  }
+  listEl.innerHTML = '';
+  presets.forEach((p, idx) => {
+    const card = document.createElement('div');
+    card.className = 'community-card';
+    card.innerHTML = `
+      <div class="cc-title">${p.name}</div>
+      <div class="cc-author">${p.baseFormat.toUpperCase()} base + ${p.modules.length} modules</div>
+      <div class="tiny-note" style="margin:6px 0 8px 0;">Speed ${p.ui?.speed ?? 1.0} · Glitch ${p.ui?.glitch ?? 1.5} · Preview ${p.ui?.preview ?? 'AUTO'}</div>
+      <div class="flex-row" style="margin-bottom:0;">
+        <button class="btn-small btn-good load-btn" style="color:#000;background:#00ff88;">Load</button>
+        <button class="btn-small delete-btn" style="color:#ff416c;border-color:rgba(255,65,108,.35);">Delete</button>
+      </div>
+    `;
+    card.querySelector('.load-btn').onclick = async () => {
+      await compileBase(p.baseCode, p.baseFormat);
+      Main.modules = (p.modules || []).map(cfg => {
+        const m = new GefModule({ ...cfg, isSandboxOnly:false });
+        m.compile();
+        return m;
+      });
+      $('sl-speed').value = p.ui?.speed ?? 1.0;
+      $('sl-glitch').value = p.ui?.glitch ?? 1.5;
+      $('sl-audio-sense').value = p.ui?.audioSense ?? 1.0;
+      $('sandbox-preview-mode').value = p.ui?.preview ?? 'AUTO';
+      $('val-speed').textContent = Number($('sl-speed').value).toFixed(1);
+      $('val-glitch').textContent = Number($('sl-glitch').value).toFixed(1);
+      $('val-audio-sense').textContent = Number($('sl-audio-sense').value).toFixed(1);
+
+      Sandbox.modules = [];
+      $('sandbox-toggle').checked = false;
+      $('sandbox-toggle').dispatchEvent(new Event('change'));
+      updateUI();
+      toggleStudioTab('studio');
+      setStatus(`Loaded preset: ${p.name}`, false, 1800);
+    };
+    card.querySelector('.delete-btn').onclick = () => {
+      const all = JSON.parse(localStorage.getItem('gef_local_presets') || '[]');
+      all.splice(idx, 1);
+      localStorage.setItem('gef_local_presets', JSON.stringify(all));
+      renderLocalPresets();
+    };
+    listEl.appendChild(card);
+  });
+}
+
+$('save-btn').onclick = () => {
+  const name = $('preset-name').value.trim() || 'Unnamed Pipeline';
+  const payload = {
+    name,
+    timestamp: Date.now(),
+    baseFormat: Main.baseFormat,
+    baseCode: Main.baseCode,
+    modules: Main.modules.map(m => m.toJSON()),
+    ui: {
+      speed: parseFloat($('sl-speed').value),
+      glitch: parseFloat($('sl-glitch').value),
+      audioSense: parseFloat($('sl-audio-sense').value),
+      preview: $('sandbox-preview-mode').value
+    }
+  };
+  const all = JSON.parse(localStorage.getItem('gef_local_presets') || '[]');
+  all.push(payload);
+  localStorage.setItem('gef_local_presets', JSON.stringify(all));
+  $('preset-name').value = '';
+  renderLocalPresets();
+  setStatus('Pipeline saved locally.', false, 1500);
+};
+
+$('btn-export-lora').onclick = () => {
+  if (!telemetryDataset.length) {
+    setStatus('Dataset is empty.', false, 2500);
+    return;
+  }
+  const jsonl = telemetryDataset.map(x => JSON.stringify(x)).join('\n');
+  const blob = new Blob([jsonl], { type:'application/jsonl' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `gef_telemetry_${Date.now()}.jsonl`;
+  a.click();
+};
+
+$('btn-import-lora').onclick = () => $('dataset-upload').click();
+$('dataset-upload').onchange = (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const lines = String(ev.target.result).split('\n').filter(Boolean);
+      const imported = lines.map(l => JSON.parse(l));
+      telemetryDataset = [...telemetryDataset, ...imported];
+      localStorage.setItem('gef_telemetry_dataset', JSON.stringify(telemetryDataset));
+      $('dataset-count').innerText = telemetryDataset.length;
+      setStatus(`Imported ${imported.length} telemetry rows.`, false, 1600);
+    } catch {
+      setStatus('Import failed.', false, 2500);
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+};
+
+$('media-upload').onchange = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  await SharedAudio.init();
+  const mediaPlayer = $('media-player');
+  mediaPlayer.src = URL.createObjectURL(file);
+  try {
+    await mediaPlayer.play();
+  } catch {}
+  SharedAudio.route(SharedAudio.ctx.createMediaElementSource(mediaPlayer), false);
+  $('playback-controls').style.display = 'block';
+  setStatus(`Loaded media: ${file.name}`, false, 1400);
+};
+
+$('btn-mic').onclick = async () => {
+  await SharedAudio.init();
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    SharedAudio.route(SharedAudio.ctx.createMediaStreamSource(stream), true);
+    $('playback-controls').style.display = 'block';
+    setStatus('Microphone input active.', false, 1400);
+  } catch {
+    setStatus('Microphone access denied.', false, 2500);
+  }
+};
+
+$('btn-play').onclick = () => $('media-player').play();
+$('btn-pause').onclick = () => $('media-player').pause();
+$('btn-stop').onclick = () => {
+  $('media-player').pause();
+  $('media-player').currentTime = 0;
+};
+
+let mediaRecorder = null;
+let recordedChunks = [];
+$('btn-record').onclick = () => {
+  const btn = $('btn-record');
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+    isRecording = false;
+    btn.textContent = 'Record';
+    btn.style.background = 'rgba(255,65,108,.2)';
+    return;
+  }
+
+  try {
+    isRecording = true;
+    const canvas = $('composite-canvas');
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+
+    // 1. Drop to 30fps. 60fps full-res canvas recording often overwhelms the browser's 
+    // internal video encoder thread over time, leading to dropped frames and audio desync.
+    const videoStream = canvas.captureStream(30); 
+    const audioTracks = SharedAudio.streamDestination ? SharedAudio.streamDestination.stream.getAudioTracks() : [];
+    const combinedStream = new MediaStream([...videoStream.getVideoTracks(), ...audioTracks]);
+
+    // 2. Explicitly pair video with Opus audio for WebM. 
+    // MP4/H264 can have multiplexing issues with Web Audio API streams in some browsers.
+    let mimeType = 'video/webm';
+    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) mimeType = 'video/webm;codecs=vp9,opus';
+    else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) mimeType = 'video/webm;codecs=vp8,opus';
+
+    // 3. Allocate a healthy bitrate (8 Mbps) to handle complex, noisy generative visuals
+    mediaRecorder = new MediaRecorder(combinedStream, { 
+      mimeType,
+      videoBitsPerSecond: 8000000 
+    });
+    
+    recordedChunks = [];
+    mediaRecorder.ondataavailable = (e) => { 
+      if (e.data && e.data.size > 0) {
+        recordedChunks.push(e.data); 
+      }
+    };
+    
+    mediaRecorder.onstop = () => {
+      // Clean up tracks when done
+      combinedStream.getTracks().forEach(track => track.stop());
+      const blob = new Blob(recordedChunks, { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `gef_capture_${Date.now()}.webm`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    // 4. Pass 1000ms timeslice! This is critical. Without it, the browser holds the entire
+    // video in RAM until you hit stop, which causes massive GC stutters and file corruption.
+    mediaRecorder.start(1000);
+    
+    btn.textContent = 'Stop';
+    btn.style.background = '#ff416c';
+    setStatus('Recording started.', false, 1200);
+  } catch (e) {
+    isRecording = false;
+    setStatus('Recording failed: ' + e.message, false, 3000);
+  }
+};
+
+$('btn-snapshot').onclick = () => {
+  const comp = $('composite-canvas');
+  comp.width = innerWidth;
+  comp.height = innerHeight;
+  const c = comp.getContext('2d');
+
+  drawComposite(c, comp.width, comp.height);
+
+  const url = comp.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `gef_snapshot_${Date.now()}.png`;
+  a.click();
+};
+
+function drawMainBase(audio, w, h, time, speed, audioSense) {
+  if (Main.baseFormat === FORMATS.WGSL && Main.wgslPipeline && Main.device) {
+    Main.gpuCanvas.style.display = 'block';
+    Main.glslCanvas.style.display = 'none';
+    Main.canvas2d.style.display = 'none';
+
+    if (Main.gpuCanvas.width !== w || Main.gpuCanvas.height !== h) {
+      Main.gpuCanvas.width = w;
+      Main.gpuCanvas.height = h;
+    }
+
+    const uniformData = new Float32Array([
+      w, h, time, audioSense, speed,
+      audio.bass, audio.mid, audio.treble, audio.beat, audio.glitch,
+      audio.centroid, audio.rms, 0,0,0,0
+    ]);
+
+    Main.device.queue.writeBuffer(Main.uniformBuffer, 0, uniformData.buffer, 0, 64);
+    const encoder = Main.device.createCommandEncoder();
+    const pass = encoder.beginRenderPass({
+      colorAttachments: [{
+        view: Main.gpuCanvas.getContext('webgpu').getCurrentTexture().createView(),
+        loadOp: 'clear',
+        clearValue: { r:0, g:0, b:0, a:1 },
+        storeOp: 'store'
+      }]
+    });
+    pass.setPipeline(Main.wgslPipeline);
+    pass.setBindGroup(0, Main.device.createBindGroup({
+      layout: Main.wgslPipeline.getBindGroupLayout(0),
+      entries: [{ binding:0, resource:{ buffer: Main.uniformBuffer } }]
+    }));
+    pass.draw(6);
+    pass.end();
+    Main.device.queue.submit([encoder.finish()]);
+  } else if (Main.baseFormat === FORMATS.GLSL && Main.glslProgram) {
+    Main.gpuCanvas.style.display = 'none';
+    Main.glslCanvas.style.display = 'block';
+    Main.canvas2d.style.display = 'none';
+
+    if (Main.glslCanvas.width !== w || Main.glslCanvas.height !== h) {
+      Main.glslCanvas.width = w;
+      Main.glslCanvas.height = h;
+      Main.gl.viewport(0, 0, w, h);
+    }
+    const gl = Main.gl;
+    gl.useProgram(Main.glslProgram);
+    const posLoc = gl.getAttribLocation(Main.glslProgram, 'position');
+    gl.enableVertexAttribArray(posLoc);
+    gl.bindBuffer(gl.ARRAY_BUFFER, Main.glBuffer);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+    const loc = (n) => gl.getUniformLocation(Main.glslProgram, n);
+    gl.uniform2f(loc('resolution'), w, h);
+    gl.uniform1f(loc('time'), time);
+    gl.uniform1f(loc('audio_sense'), audioSense);
+    gl.uniform1f(loc('speed'), speed);
+    gl.uniform1f(loc('bass'), audio.bass);
+    gl.uniform1f(loc('mid'), audio.mid);
+    gl.uniform1f(loc('treble'), audio.treble);
+    gl.uniform1f(loc('beat'), audio.beat);
+    gl.uniform1f(loc('glitch'), audio.glitch);
+    gl.uniform1f(loc('centroid'), audio.centroid);
+    gl.uniform1f(loc('rms'), audio.rms);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  } else {
+    Main.gpuCanvas.style.display = 'none';
+    Main.glslCanvas.style.display = 'none';
+    Main.canvas2d.style.display = 'block';
+
+    if (Main.canvas2d.width !== w || Main.canvas2d.height !== h) {
+      Main.canvas2d.width = w;
+      Main.canvas2d.height = h;
+    }
+    Main.ctx2d.clearRect(0,0,w,h);
+
+    if (Main.baseFormat === FORMATS.JS && Main.jsBaseFn) {
+      try { Main.jsBaseFn(Main.ctx2d, w, h, time, audio); } catch {}
+    } else if (Main.baseFormat === FORMATS.PYTHON && pyodideInstance) {
+      try {
+        pyodideInstance.globals.set('ctx', Main.ctx2d);
+        pyodideInstance.globals.set('w', w);
+        pyodideInstance.globals.set('h', h);
+        pyodideInstance.globals.set('time', time);
+        pyodideInstance.globals.set('speed', speed);
+        pyodideInstance.globals.set('bass', audio.bass);
+        pyodideInstance.globals.set('mid', audio.mid);
+        pyodideInstance.globals.set('treble', audio.treble);
+        pyodideInstance.globals.set('beat', audio.beat);
+        pyodideInstance.globals.set('glitch', audio.glitch);
+        pyodideInstance.globals.set('centroid', audio.centroid);
+        pyodideInstance.globals.set('rms', audio.rms);
+        pyodideInstance.runPython('render_frame()');
+      } catch {}
+    }
+
+    // draw stable non-base modules only on 2D path
+    const stageList = Object.values(STAGES).sort((a,b)=>a.order-b.order);
+    for (const stage of stageList) {
+      if (stage.id === STAGES.BASE.id) continue;
+      for (const mod of Main.getModulesByStage(stage.id)) {
+        try {
+          mod.execute(Main.ctx2d, w, h, time, audio, null);
+        } catch {}
+      }
+    }
+  }
+}
+
+function drawComposite(cCtx, w, h) {
+  cCtx.clearRect(0,0,w,h);
+
+  if (Main.baseFormat === FORMATS.WGSL) cCtx.drawImage(Main.gpuCanvas, 0, 0);
+  else if (Main.baseFormat === FORMATS.GLSL) cCtx.drawImage(Main.glslCanvas, 0, 0);
+  else cCtx.drawImage(Main.canvas2d, 0, 0);
+
+  if (Sandbox.isActive) cCtx.drawImage(Sandbox.canvas, 0, 0);
+}
+
+function renderEngine() {
+  const now = performance.now();
+  const dt = (now - lastFrameTime) / 1000;
+  lastFrameTime = now;
+
+  const speed = parseFloat($('sl-speed').value);
+  const glitchThreshold = parseFloat($('sl-glitch').value);
+  const audioSense = parseFloat($('sl-audio-sense').value);
+  globalTime += dt * speed;
+
+  const audio = SharedAudio.update(glitchThreshold, audioSense);
+
+  $('fill-bass').style.width = `${Math.min(audio.bass * 100, 100)}%`;
+  $('fill-mid').style.width = `${Math.min(audio.mid * 100, 100)}%`;
+  $('fill-treble').style.width = `${Math.min(audio.treble * 100, 100)}%`;
+  $('fill-glitch').style.width = `${Math.min(audio.glitch * 100, 100)}%`;
+  $('fill-centroid').style.width = `${Math.min(audio.centroid * 1000, 100)}%`;
+
+  const w = innerWidth, h = innerHeight;
+  drawMainBase(audio, w, h, globalTime, speed, audioSense);
+  Sandbox.render(w, h, globalTime, audio);
+
+  if (isRecording) {
+    const comp = $('composite-canvas');
+    if (comp.width !== w || comp.height !== h) {
+      comp.width = w; comp.height = h;
+    }
+    drawComposite(comp.getContext('2d'), w, h);
+  }
+
+  requestAnimationFrame(renderEngine);
+}
+
+// --------------------------------------------------------
+// AUTOPILOT VISUAL FOUNDRY (AUTOMATED SEQUENCE & REPAIR)
+// --------------------------------------------------------
+
+const AutoPilot = {
+  running: false,
+  queue: [],
+  currentIndex: 0,
+  maxRepairAttempts: 2,
+  delayBetweenRunsMs: 2500,
+  smokeTestFrames: 8,
+  autoCommitToMain: true,
+  autoSavePreset: true,
+  logs: JSON.parse(localStorage.getItem('gef_autopilot_logs') || '[]'),
+  stats: {
+    completed: 0,
+    failed: 0,
+    repaired: 0
+  }
+};
+
+function saveAutoPilotLogs() {
+  localStorage.setItem('gef_autopilot_logs', JSON.stringify(AutoPilot.logs));
+}
+
+function renderAutopilotLog() {
+  const el = $('autopilot-log');
+  if (!el) return;
+  
+  if (!AutoPilot.logs.length) {
+    el.innerHTML = '<div style="color:#666;font-size:.72rem;text-align:center;">No logs yet.</div>';
+    return;
+  }
+
+  el.innerHTML = AutoPilot.logs.slice(-50).reverse().map(entry => {
+    return `
+      <div style="margin-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:4px;">
+        <div style="font-size:0.65rem; color:#00b8ff;">${new Date(entry.ts).toLocaleTimeString()} · ${entry.type}</div>
+        <div style="font-size:0.72rem; color:#ddd;">${entry.message}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function logAutoPilot(type, message, extra = {}) {
+  const entry = {
+    ts: new Date().toISOString(),
+    type,
+    message,
+    ...extra
+  };
+  AutoPilot.logs.push(entry);
+  if (AutoPilot.logs.length > 500) AutoPilot.logs.shift();
+  saveAutoPilotLogs();
+  renderAutopilotLog();
+  console.log('[AUTOPILOT]', entry);
+}
+
+// Procedural Idea Generator
+$('btn-auto-ideas').onclick = () => {
+  const themes = [
+    "Quantum field data visualization", "Bioluminescent deep-sea flora", "Hyper-dimensional tesseract unfoldings",
+    "Cyberpunk neon datastream", "Sacred geometry mandalas", "Liquid metal ferrofluid ripples",
+    "Abstract glitch typography space", "Ethereal crystal cave growths", "Holographic wireframe mountains",
+    "Microscopic cellular division", "Synesthetic frequency spectrum mapping"
+  ];
+  const motions = [
+    "recursive fractal zooming", "fluid dynamics simulations", "chaotic strange attractors",
+    "trigonometric wave interference", "orbital planetary rings", "cellular automata evolution",
+    "Lissajous curves overlay", "non-euclidean topology warping"
+  ];
+  const audios = [
+    "bass-driven geometric fracturing", "treble-sparking particle systems", "centroid-mapped chromatic aberration",
+    "glitch-triggered time stutters", "beat-synced strobe geometry", "rms-powered shadow blooming"
+  ];
+
+  let ideas = [];
+  for(let i=0; i<5; i++) {
+    const t = themes[Math.floor(Math.random() * themes.length)];
+    const m = motions[Math.floor(Math.random() * motions.length)];
+    const a = audios[Math.floor(Math.random() * audios.length)];
+    ideas.push(`${t} using ${m} with ${a}.`);
+  }
+  
+  const el = $('autopilot-seeds');
+  el.value = el.value.trim() ? el.value + '\n\n' + ideas.join(' ') : ideas.join(' ');
+  setStatus('Added auto-generated concepts to the prompt.', false, 2500);
+};
+
+function loadAutopilotQueueFromTextarea(textareaValue, count = 5) {
+  const fullPrompt = textareaValue.trim();
+  AutoPilot.queue = [];
+  
+  for (let i = 0; i < count; i++) {
+    // We pass the full text, appending a hidden instruction so the AI knows to create unique variations
+    AutoPilot.queue.push(`${fullPrompt}\n\n(Note: This is iteration ${i + 1} of ${count}. Make it uniquely distinct from previous iterations while maintaining the core theme.)`);
+  }
+
+  AutoPilot.currentIndex = 0;
+  logAutoPilot('QUEUE', `Queued ${count} variations using the full prompt.`);
+}
+
+async function generateVisualModuleFromPrompt(promptStr, stage = 'BASE') {
+  const sysPrompt = `
+You are a master generative artist and senior browser graphics architect writing JavaScript Canvas 2D visual modules.
+Return ONLY raw JavaScript for the body of a render function. No markdown fences, no explanations.
+First line must be exactly: // NAME: [Module Name]
+
+Stage: ${stage}
+
+AVAILABLE ARGUMENTS:
+- ctx (CanvasRenderingContext2D), w (width), h (height), time (elapsed seconds)
+- audio = {bass, mid, treble, beat, glitch, centroid, rms} (all 0.0 to 1.0+)
+- fbCtx (feedback canvas context for trailing/recursive effects)
+
+CRITICAL RULES & AESTHETICS:
+1. If BASE: Draw a complete, opaque scene. Fill the background first (e.g., ctx.fillStyle = 'black'; ctx.fillRect(0,0,w,h)).
+2. If OVERLAY: Do not clear the frame. Use additive or overlay blending.
+3. Advanced Techniques: Heavily utilize createLinearGradient, createRadialGradient, globalCompositeOperation (e.g., 'lighter', 'exclusion', 'screen'), shadowBlur, and advanced path drawing. Avoid basic flat rectangles unless styled perfectly.
+4. Deep Audio Integration: Tie audio to rotation speed, gradient color stops, fractal depth, or geometric scale.
+   - audio.beat > 0.5: Trigger bursts, strobes, or high-energy expansions.
+   - audio.glitch > 0.5: Apply chromatic aberration, context shifting, or slicing (e.g., ctx.drawImage sliced).
+   - audio.centroid: Use for hue shifting (e.g., \`hsl(\${audio.centroid * 360}, 100%, 50%)\`).
+5. Math/Geometry: Use trigonometric functions (Math.sin, Math.cos) combined with time to create organic, flowing, or complex mechanical motion. Try Lissajous curves, spirographs, or particle-like mathematics.
+6. Code Quality: Ensure valid JS. Close all paths and brackets. Keep it visually stunning, avoid muddy "random noise". Ensure high aesthetic value.
+  `.trim();
+
+  const userPrompt = `Create a ${stage} visual module matching this creative vision: ${promptStr}`;
+
+  const payload = {
+    contents: [{ parts: [{ text: userPrompt }] }],
+    systemInstruction: { parts: [{ text: sysPrompt }] }
+  };
+
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) throw new Error(`Generation HTTP ${res.status}`);
+
+  const data = await res.json();
+  let code = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  code = code.replace(/```[a-z]*\n?|```/gi, '').trim();
+
+  if (!code) throw new Error('Generator returned empty code.');
+
+  return code;
+}
+
+function compileSmokeTest(code) {
+  try {
+    const fn = new Function('ctx', 'w', 'h', 'time', 'audio', 'fbCtx', `"use strict";\n${code}`);
+    return { ok: true, fn, error: null };
+  } catch (err) {
+    return { ok: false, fn: null, error: err.message };
+  }
+}
+
+function runtimeSmokeTest(compiledFn, frames = 8) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 640;
+  canvas.height = 360;
+  const ctx = canvas.getContext('2d');
+
+  const fbCanvas = document.createElement('canvas');
+  fbCanvas.width = 640;
+  fbCanvas.height = 360;
+  const fbCtx = fbCanvas.getContext('2d');
+
+  let lastError = null;
+
+  for (let i = 0; i < frames; i++) {
+    const time = i * 0.016;
+    const audio = {
+      bass: Math.random(),
+      mid: Math.random(),
+      treble: Math.random(),
+      beat: i % 3 === 0 ? 1 : 0.2,
+      glitch: Math.random() * 0.6,
+      centroid: Math.random(),
+      rms: Math.random()
+    };
+
+    try {
+      ctx.save();
+      compiledFn(ctx, canvas.width, canvas.height, time, audio, fbCtx);
+      ctx.restore();
+
+      fbCtx.clearRect(0, 0, fbCanvas.width, fbCanvas.height);
+      fbCtx.drawImage(canvas, 0, 0);
+    } catch (err) {
+      lastError = err.message;
+      break;
+    }
+  }
+
+  return { ok: !lastError, error: lastError };
+}
+
+function validateGeneratedVisual(code, frames = 8) {
+  const compileResult = compileSmokeTest(code);
+  if (!compileResult.ok) {
+    return { ok: false, phase: 'compile', error: compileResult.error };
+  }
+
+  const runtimeResult = runtimeSmokeTest(compileResult.fn, frames);
+  if (!runtimeResult.ok) {
+    return { ok: false, phase: 'runtime', error: runtimeResult.error };
+  }
+
+  return { ok: true, fn: compileResult.fn };
+}
+
+async function repairGeneratedCode(originalPrompt, brokenCode, errorText, stage = 'BASE') {
+  const sysPrompt = `
+You repair JavaScript Canvas 2D visual modules. You are an expert at fixing syntax and runtime errors in generative graphics.
+Return ONLY corrected JavaScript code.
+First line must be exactly: // NAME: [Module Name]
+Do not explain your fix. Only return the raw fixed code. Do not output markdown fences.
+
+CRITICAL: Maintain the original aesthetic intent. Make sure audio reactive mappings (audio.bass, audio.centroid, etc.) are intact and that Canvas calls are valid.
+Stage: ${stage}
+  `.trim();
+
+  const userPrompt = `
+The following generated visual module failed.
+
+Original creative goal:
+${originalPrompt}
+
+Error triggered during evaluation:
+${errorText}
+
+Broken code to fix:
+${brokenCode}
+
+Repair it while preserving the original artistic intent.
+  `.trim();
+
+  const payload = {
+    contents: [{ parts: [{ text: userPrompt }] }],
+    systemInstruction: { parts: [{ text: sysPrompt }] }
+  };
+
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) throw new Error(`Repair HTTP ${res.status}`);
+
+  const data = await res.json();
+  let fixed = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  fixed = fixed.replace(/```[a-z]*\n?|```/gi, '').trim();
+
+  if (!fixed) throw new Error('Repair returned empty code.');
+
+  return fixed;
+}
+
+async function buildVisualWithRepair(promptStr, stage = 'BASE') {
+  let attempt = 0;
+  let code = await generateVisualModuleFromPrompt(promptStr, stage);
+
+  while (attempt <= AutoPilot.maxRepairAttempts) {
+    const test = validateGeneratedVisual(code, AutoPilot.smokeTestFrames);
+
+    if (test.ok) {
+      if (attempt > 0) AutoPilot.stats.repaired++;
+      return {
+        ok: true,
+        code,
+        repaired: attempt > 0,
+        attempts: attempt
+      };
+    }
+
+    logAutoPilot('ERROR', `Visual failed during ${test.phase}.`, {
+      prompt: promptStr,
+      phase: test.phase,
+      error: test.error,
+      attempt
+    });
+
+    if (attempt === AutoPilot.maxRepairAttempts) {
+      return {
+        ok: false,
+        code,
+        error: test.error,
+        phase: test.phase,
+        attempts: attempt
+      };
+    }
+
+    setStatus(`Autopilot Repair Attempt ${attempt + 1}...`, true);
+    code = await repairGeneratedCode(promptStr, code, test.error, stage);
+    attempt++;
+  }
+
+  return { ok: false, code, error: 'Unknown repair loop failure.' };
+}
+
+function addGeneratedModuleToSandbox(code, stage = 'BASE') {
+  const nameMatch = code.match(/^(?:\/\/|#)\s*NAME:\s*(.+)$/m);
+  const modName = nameMatch ? nameMatch[1].trim() : `Auto Visual ${Date.now()}`;
+
+  const mod = new GefModule({
+    name: modName,
+    code,
+    stage,
+    format: 'js',
+    isSandboxOnly: true
+  });
+
+  if (!mod.compile()) {
+    throw new Error(`Final sandbox compile failed: ${mod.error}`);
+  }
+
+  if (stage === 'BASE') {
+    Sandbox.modules = Sandbox.modules.filter(m => m.stage !== 'BASE');
+  }
+
+  Sandbox.modules.push(mod);
+  Sandbox.isActive = true;
+  $('sandbox-toggle').checked = true;
+  $('sandbox-toggle').dispatchEvent(new Event('change'));
+  updateUI();
+
+  logAutoPilot('SANDBOX', `Injected module into sandbox: ${modName}`, { stage });
+  return mod;
+}
+
+function autoSaveCurrentPreset(namePrefix = 'AutoPreset') {
+  const name = `${namePrefix} ${new Date().toLocaleString()}`;
+
+  const presetData = {
+    name,
+    baseFormat: Main.baseFormat,
+    baseCode: Main.baseCode,
+    modules: Main.modules.map(m => m.toJSON()),
+    timestamp: Date.now(),
+    ui: {
+      speed: parseFloat($('sl-speed').value),
+      glitch: parseFloat($('sl-glitch').value),
+      audioSense: parseFloat($('sl-audio-sense')?.value || 1.0),
+      preview: $('sandbox-preview-mode').value
+    }
+  };
+
+  const all = JSON.parse(localStorage.getItem('gef_local_presets') || '[]');
+  all.push(presetData);
+  localStorage.setItem('gef_local_presets', JSON.stringify(all));
+
+  logAutoPilot('SAVE', `Preset saved: ${name}`);
+  return presetData;
+}
+
+async function autoCommitSandboxBaseToMain() {
+  const valid = Sandbox.modules.filter(m => !m.error && m.enabled);
+  let promoted = 0;
+
+  for (const m of valid) {
+    const stable = new GefModule({ ...m, isSandboxOnly:false });
+    stable.compile();
+
+    if (stable.stage === STAGES.BASE.id && stable.format === FORMATS.JS) {
+      await compileBase(stable.code, FORMATS.JS);
+      promoted++;
+      continue;
+    }
+    if (stable.stage !== STAGES.BASE.id) {
+      Main.modules.push(stable);
+      promoted++;
+    }
+  }
+
+  Sandbox.modules = [];
+  $('sandbox-toggle').checked = false;
+  $('sandbox-toggle').dispatchEvent(new Event('change'));
+  updateUI();
+  
+  if (promoted > 0) {
+    logAutoPilot('COMMIT', `Committed ${promoted} sandbox module(s) to main engine.`);
+  }
+}
+
+function logTrainingExample(promptStr, code, outcome, meta = {}) {
+  const row = {
+    timestamp: new Date().toISOString(),
+    input_prompt: promptStr,
+    generated_code: code,
+    outcome, // "success", "compile_fail", "runtime_fail", "repair_success"
+    meta
+  };
+
+  // Log to isolated ML dataset for fine-tuning
+  const dataset = JSON.parse(localStorage.getItem('gef_visual_training_rows') || '[]');
+  dataset.push(row);
+  localStorage.setItem('gef_visual_training_rows', JSON.stringify(dataset));
+  
+  // Also push to standard unified telemetry
+  logTelemetry('AUTOPILOT_TRAINING_ROW', row);
+}
+
+async function runOneAutopilotCycle(promptStr) {
+  logAutoPilot('START', `Starting visual build for: ${promptStr}`);
+  setStatus(`Autopilot Generating: ${promptStr.substring(0,25)}...`, true);
+
+  const result = await buildVisualWithRepair(promptStr, 'BASE');
+
+  if (!result.ok) {
+    AutoPilot.stats.failed++;
+    logAutoPilot('FAIL', `Visual failed after retries.`, {
+      prompt: promptStr,
+      error: result.error,
+      attempts: result.attempts
+    });
+    logTrainingExample(promptStr, result.code, result.phase === 'compile' ? 'compile_fail' : 'runtime_fail', { error: result.error });
+    return false;
+  }
+
+  addGeneratedModuleToSandbox(result.code, 'BASE');
+
+  if (AutoPilot.autoCommitToMain) {
+    await autoCommitSandboxBaseToMain();
+  }
+
+  if (AutoPilot.autoSavePreset) {
+    autoSaveCurrentPreset('Auto Visual');
+  }
+
+  AutoPilot.stats.completed++;
+  logAutoPilot('SUCCESS', `Visual completed successfully.`, {
+    prompt: promptStr,
+    repaired: result.repaired,
+    attempts: result.attempts
+  });
+  
+  logTrainingExample(promptStr, result.code, result.repaired ? 'repair_success' : 'success', {
+    attempts: result.attempts,
+    repaired: result.repaired
+  });
+
+  return true;
+}
+
+async function runAutopilotBatch() {
+  if (AutoPilot.running) return;
+  AutoPilot.running = true;
+
+  logAutoPilot('BATCH', `Autopilot started with ${AutoPilot.queue.length} prompts.`);
+  setStatus('Autopilot Batch Running...', true);
+
+  while (AutoPilot.running && AutoPilot.currentIndex < AutoPilot.queue.length) {
+    const promptStr = AutoPilot.queue[AutoPilot.currentIndex];
+
+    try {
+      await runOneAutopilotCycle(promptStr);
+    } catch (err) {
+      AutoPilot.stats.failed++;
+      logAutoPilot('CRASH', `Batch cycle crashed.`, {
+        prompt: promptStr,
+        error: err.message
+      });
+    }
+
+    AutoPilot.currentIndex++;
+
+    if (!AutoPilot.running) break;
+    await new Promise(resolve => setTimeout(resolve, AutoPilot.delayBetweenRunsMs));
+  }
+
+  AutoPilot.running = false;
+  logAutoPilot('BATCH', 'Autopilot finished.', {
+    completed: AutoPilot.stats.completed,
+    failed: AutoPilot.stats.failed,
+    repaired: AutoPilot.stats.repaired
+  });
+  setStatus('Autopilot Batch Complete.', false, 3000);
+}
+
+function stopAutopilot() {
+  AutoPilot.running = false;
+  logAutoPilot('BATCH', 'Autopilot stopped by user.');
+  setStatus('Autopilot Stopped.', false, 2500);
+}
+
+// Wire Autopilot UI Buttons
+$('btn-run-one').onclick = async () => {
+  const text = $('autopilot-seeds').value.trim();
+  if (!text) return setStatus('Add a seed prompt.', false, 3000);
+  await runOneAutopilotCycle(text);
+};
+
+$('btn-run-batch').onclick = async () => {
+  const text = $('autopilot-seeds').value.trim();
+  if (!text) return setStatus('Add a seed prompt to run a batch.', false, 3000);
+  
+  const count = parseInt($('autopilot-batch-count')?.value || 5, 10);
+  loadAutopilotQueueFromTextarea(text, count);
+  await runAutopilotBatch();
+};
+
+$('btn-stop-batch').onclick = () => {
+  stopAutopilot();
+};
+
+async function boot() {
+  await Main.initWebGPU();
+  $('code-viewer').value = baseCodes.wgsl;
+  $('code-format').value = 'wgsl';
+  await compileBase(baseCodes.wgsl, 'wgsl');
+  updateUI();
+  requestAnimationFrame(renderEngine);
+}
+boot();
+</script>
+</body>
+</html>
+
+
+
+
+
+```
