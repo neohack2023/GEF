@@ -91,6 +91,22 @@
     <div class="flex-row" style="margin-bottom:8px;"><button id="btn-auto-ideas" class="btn-small btn-magic" style="width:100%;">Auto-Generate Seed Ideas</button></div>
     <textarea id="autopilot-seeds" placeholder="Enter your visual direction, theme, or overarching concept here..." style="min-height:120px;"></textarea>
     <div class="flex-row" style="margin-top:8px;align-items:center;"><button id="btn-run-one" class="btn-small btn-good" style="color:#000;background:#00ff88;flex:1.5;">Run One</button><div style="display:flex;flex:3;gap:4px;align-items:center;"><input type="number" id="autopilot-batch-count" title="Batch Runs" value="5" min="2" max="100" style="width:50px;padding:6px;margin:0;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.48);color:#fff;font-size:.8rem;text-align:center;"><button id="btn-run-batch" class="btn-small btn-ai" style="flex:1;">Run Batch</button></div><button id="btn-stop-batch" class="btn-small btn-panic" style="flex:1;">Stop</button></div>
+
+    <div class="section-title" style="margin-top:16px;">Provider Access</div>
+    <div style="padding:10px;background:rgba(0,0,0,.4);border-radius:10px;border:1px solid rgba(168,85,247,.22);">
+      <div class="tiny-note warn-note" style="margin-bottom:8px;">Secrets stay outside GEF. Use a local SLM endpoint or a user-controlled LLM proxy.</div>
+      <select id="provider-mode" style="margin-bottom:8px;">
+        <option value="none" selected>Provider: Disabled</option>
+        <option value="local-slm">Provider: Local SLM Endpoint</option>
+        <option value="llm-proxy">Provider: LLM Proxy Endpoint</option>
+      </select>
+      <input id="provider-endpoint" type="url" placeholder="Endpoint URL, for example http://localhost:11434/api/generate" />
+      <input id="provider-model" type="text" placeholder="Model name, for example local-code-helper" />
+      <input id="provider-credential-ref" type="text" placeholder="Credential reference name, not the credential value" />
+      <div class="flex-row" style="margin-top:8px;"><button id="provider-save-btn" class="btn-small btn-good" style="color:#000;background:#00ff88;">Save Provider Settings</button><button id="provider-copy-contract-btn" class="btn-small" style="background:rgba(168,85,247,.16);color:#d2a8ff;border-color:rgba(168,85,247,.38);">Copy Proxy Contract</button></div>
+      <div id="provider-settings-status" class="tiny-note" style="margin-top:8px;">Provider disabled. Foundry still uses curated local sandbox notes.</div>
+    </div>
+
     <div class="section-title" style="margin-top:16px;">Foundry Logs</div>
     <div id="autopilot-log" style="max-height:280px;overflow:auto;background:rgba(0,0,0,.36);border:1px solid rgba(255,255,255,.05);border-radius:10px;padding:10px;"><div style="color:#666;font-size:.72rem;text-align:center;">No logs yet.</div></div>
   </div>
@@ -137,5 +153,6 @@
 <audio id="media-player" crossorigin="anonymous" style="display:none;"></audio>
 <script type="module" src="./src/app.js"></script>
 <script type="module" src="./src/compiler/manualCompilerAssist.js"></script>
+<script type="module" src="./src/foundry/providerSettings.js"></script>
 </body>
 </html>
