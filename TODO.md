@@ -22,6 +22,8 @@ Observed so far:
 - [x] The app is not globally broken on the hosted webserver path.
 - [x] Default `voidCore` render appears.
 - [x] Meters render at zero without audio.
+- [x] Sliders update labels.
+- [x] Studio, Foundry, and Library tabs switch.
 - [x] Preset and Foundry log rendering now use DOM nodes and `textContent` for user/log text.
 - [x] JSONL import now has file size, row count, line length, line-by-line parsing, and partial failure reporting.
 - [ ] Full local laptop smoke test is still pending.
@@ -98,8 +100,8 @@ Tasks:
 - [ ] Confirm `src/app.js` loads as an ES module.
 - [x] Confirm default `voidCore` render appears.
 - [x] Confirm meters render at zero without audio.
-- [ ] Confirm sliders update labels.
-- [ ] Confirm Studio, Foundry, and Library tabs switch.
+- [x] Confirm sliders update labels.
+- [x] Confirm Studio, Foundry, and Library tabs switch.
 - [ ] Confirm sandbox toggle works.
 - [ ] Confirm panic reset clears sandbox state.
 - [ ] Confirm save/load/delete preset flow works.
