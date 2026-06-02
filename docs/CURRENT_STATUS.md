@@ -1,6 +1,6 @@
 # GEF Current Status
 
-Last updated after the media capability and browser/CSP warning Phase 1 hardening pass.
+Last updated after adding repo-side project check scripts.
 
 This file is the quick handoff note for where the repo currently stands. Deeper design rules live in the specific docs; this page is the dashboard sticky note.
 
@@ -14,7 +14,7 @@ Models may suggest. Validators decide. Users promote.
 
 ## Current verification state
 
-GEF is partially smoke-tested but does not have an automated test harness yet.
+GEF is partially smoke-tested but does not have an automated browser test harness yet.
 
 Observed so far:
 
@@ -28,6 +28,7 @@ Observed so far:
 - The laptop issue is currently treated as browser/deployment-specific until reproduced elsewhere.
 - Full local laptop smoke testing is still pending.
 - Playwright or other automated browser tests are not implemented yet.
+- Repo-side scripts now exist for local static serving, syntax checks, and a small security scan, but they still need to be run in a local checkout.
 
 Current assumption:
 
@@ -161,6 +162,34 @@ Why it matters:
 Media export and capture paths should fail loudly, not mysteriously.
 ```
 
+### Project check scripts added
+
+Commits:
+
+```text
+0f46957ee05adf7803bf907a4a214e6672cfdf60 - Add project check scripts
+d4a71e80ac8c474f89d132fa066aa629c4541cad - Add security scan helper
+```
+
+What changed:
+
+- Added `package.json` with scripts for:
+  - `npm run dev`
+  - `npm run check`
+  - `npm run check:syntax`
+  - `npm run check:security`
+  - `npm run smoke:manual`
+- `npm run dev` starts the existing Python static server on port 8080.
+- `npm run check:syntax` runs `node --check` across the current JavaScript modules.
+- `npm run check:security` runs `tools/security-scan.mjs`.
+- The security scan searches `index.html` and `src/` for review-triggering patterns including `eval(`, `new Function`, API key wording, secret wording, and bearer-token-looking strings.
+
+Important limitation:
+
+```text
+These scripts are present in the repo, but they have not yet been run and verified in the user's local checkout.
+```
+
 ---
 
 ## Current implementation limits
@@ -225,6 +254,21 @@ Still pending:
 - Chromium/Firefox/WebKit automated smoke coverage
 - explicit CSP header/meta review for hosted deployment
 
+### Testing and automation
+
+Basic repo-side checks now exist, but this is not yet a full browser test harness.
+
+Still pending:
+
+- local execution of `npm run check`
+- Playwright installation/configuration
+- boot smoke test
+- sandbox panic test
+- preset save/load test
+- JSONL import/export tests
+- media unsupported-path tests
+- GitHub Actions workflow
+
 ---
 
 ## Next recommended build step
@@ -232,11 +276,13 @@ Still pending:
 Next target:
 
 ```text
-Finish Phase 0 manual smoke checks, then add the test harness.
+Run local checks, finish Phase 0 manual smoke checks, then add Playwright.
 ```
 
 Build goals:
 
+- Run `npm run check` locally.
+- Run `npm run dev` locally and open `http://localhost:8080`.
 - Confirm local-server boot.
 - Confirm `src/app.js` loads as an ES module locally.
 - Confirm sandbox toggle and panic reset behavior.
@@ -248,17 +294,23 @@ Build goals:
 Why this is next:
 
 ```text
-Phase 1 hardening is now mostly in place. The app needs repeatable proof, not more theoretical armor plating.
+The project now has a starter check loop. The app needs local execution results and browser smoke tests before bigger architecture work.
 ```
 
 ---
 
 ## Manual tests to run next
 
-Run from local server:
+Run checks:
 
 ```bash
-python -m http.server 8080
+npm run check
+```
+
+Run local server:
+
+```bash
+npm run dev
 ```
 
 Open:
@@ -297,5 +349,5 @@ Test checklist:
 Use this if resuming later:
 
 ```text
-Continue GEF from CURRENT_STATUS.md. Phase 1 hardening now includes preset/Foundry log text rendering, safer JSONL import parsing, import quarantine metadata with line-number provenance, and media capability/CSP warning checks. Next: finish Phase 0 manual smoke checks, especially sandbox/panic/preset/JSONL/media on local server, then add the test harness. Do not implement LLM/SLM provider generation yet. Keep changes small and verify against live GitHub before committing.
+Continue GEF from CURRENT_STATUS.md. Phase 1 hardening now includes preset/Foundry log text rendering, safer JSONL import parsing, import quarantine metadata with line-number provenance, and media capability/CSP warning checks. Repo-side starter scripts now include npm run dev, npm run check:syntax, and npm run check:security, but local execution still needs verification. Next: run local checks and Phase 0 manual smoke tests, then add Playwright. Do not implement LLM/SLM provider generation yet. Keep changes small and verify against live GitHub before committing.
 ```
