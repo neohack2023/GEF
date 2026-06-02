@@ -20,6 +20,7 @@ Observed so far:
 
 - [x] Hosted static deployment loads and runs on mobile from `https://gtterminal.neocities.org/systems/Gef/Index`.
 - [x] The app is not globally broken on the hosted webserver path.
+- [x] Default `voidCore` render appears.
 - [x] Preset and Foundry log rendering now use DOM nodes and `textContent` for user/log text.
 - [x] JSONL import now has file size, row count, line length, line-by-line parsing, and partial failure reporting.
 - [ ] Full local laptop smoke test is still pending.
@@ -94,7 +95,7 @@ Tasks:
 - [x] Confirm hosted static deployment can run on at least one mobile browser.
 - [ ] Run from a local server, not `file://`.
 - [ ] Confirm `src/app.js` loads as an ES module.
-- [ ] Confirm default `voidCore` render appears.
+- [x] Confirm default `voidCore` render appears.
 - [ ] Confirm meters render at zero without audio.
 - [ ] Confirm sliders update labels.
 - [ ] Confirm Studio, Foundry, and Library tabs switch.
