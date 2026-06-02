@@ -1,6 +1,6 @@
 # GEF Current Status
 
-Last updated after the first Phase 1 hardening passes.
+Last updated after the import quarantine Phase 1 hardening pass.
 
 This file is the quick handoff note for where the repo currently stands. Deeper design rules live in the specific docs; this page is the dashboard sticky note.
 
@@ -20,6 +20,10 @@ Observed so far:
 
 - Hosted static deployment runs on mobile from `https://gtterminal.neocities.org/systems/Gef/Index`.
 - The app is not globally broken on the hosted Neocities path.
+- Default `voidCore` render appears.
+- Meters render at zero without audio.
+- Sliders update labels.
+- Studio, Foundry, and Library tabs switch.
 - Laptop Edge showed browser/CSP-style behavior around `blob:` media and a stale/optional Pyodide source-map request.
 - The laptop issue is currently treated as browser/deployment-specific until reproduced elsewhere.
 - Full local laptop smoke testing is still pending.
@@ -81,14 +85,34 @@ What changed:
 - Mixed files can import valid rows while reporting bad lines.
 - Read failures report a clear status message.
 
+### Imported telemetry rows now start quarantined
+
+Commits:
+
+```text
+cbe43e8cf5fc3e1c7dd47a462f4006376bfd3604 - Add telemetry import quarantine state
+8876d2b7c6f7a8e4223235040577d789736055ca - Preserve JSONL import line numbers
+```
+
+What changed:
+
+- Parsed JSONL rows now preserve their original source line number.
+- `importTelemetryRows(rows, metadata)` accepts import metadata.
+- Imported rows are wrapped with `_gefImport` metadata.
+- `_gefImport.state` is set to `quarantined`.
+- `_gefImport.schemaStatus` is set to `unvalidated`.
+- `_gefImport.reviewed` is set to `false`.
+- Import metadata includes file name, imported timestamp, original index, line number, and parser version.
+- Import status messages now say `quarantined rows` instead of silently treating imports as trusted telemetry.
+
 Current behavior examples:
 
 ```text
 Valid file:
-Imported 12 telemetry rows. Total: 12.
+Imported 12 quarantined telemetry rows. Total: 12.
 
 Mixed valid and invalid file:
-Imported 10 rows, rejected 2. line 3: ...
+Imported 10 quarantined rows, rejected 2. line 3: ...
 
 Oversized file:
 Import blocked: file exceeds 2 MB.
@@ -99,8 +123,9 @@ Import rejected 1 lines. First error line 1: ...
 
 Important limitation:
 
-- Imported rows are safer to parse now, but they are not yet schema-normalized into `gef-feedback-row-v1`.
-- Imported rows do not yet get a formal quarantine wrapper.
+- Imported rows are quarantined and line-tagged, but they are not yet schema-normalized into `gef-feedback-row-v1`.
+- There is no quarantine review UI yet.
+- There is no promote/reject quarantine workflow yet.
 - Raw telemetry is still not training data.
 
 ---
@@ -136,16 +161,25 @@ No frontend provider keys should be added.
 
 ### Dataset and memory
 
-Current telemetry is still legacy local JSONL.
+Current telemetry is still legacy local JSONL plus `_gefImport` metadata for imported rows.
 
-The repo now has docs for:
+The repo now has docs and partial implementation for:
 
+- safer JSONL parsing
+- per-row import line provenance
+- import quarantine state
 - `gef-feedback-row-v1`
 - memory scoring and retention
 - dataset split policy
 - import quarantine policy
 
-But those docs are not fully implemented in code yet.
+Still pending:
+
+- full `gef-feedback-row-v1` row builder
+- schema validation/migration
+- quarantine review UI
+- training/eval/holdout export gates
+- memory promotion workflow
 
 ---
 
@@ -202,10 +236,11 @@ Test checklist:
 - Save/load/delete preset works.
 - Unsafe preset name displays as text.
 - Foundry logs display as text.
-- Valid JSONL imports.
+- Valid JSONL imports as quarantined rows.
 - Invalid JSONL reports line errors.
-- Mixed JSONL imports valid rows and reports bad lines.
+- Mixed JSONL imports valid rows as quarantined and reports bad lines.
 - Oversized JSONL is blocked.
+- Imported rows include `_gefImport.state = "quarantined"` and a source line number.
 - Media upload works where browser policy allows it.
 - Microphone path either works or reports denial/unavailable clearly.
 - Recording either works or reports unsupported clearly.
@@ -217,5 +252,5 @@ Test checklist:
 Use this if resuming later:
 
 ```text
-Continue GEF from CURRENT_STATUS.md. Phase 1 completed so far: preset/Foundry log text rendering hardening and safer JSONL import parsing. Next: add media capability checks and browser/CSP warnings. Do not implement LLM/SLM provider generation yet. Keep changes small and verify against live GitHub before committing.
+Continue GEF from CURRENT_STATUS.md. Phase 1 completed so far: preset/Foundry log text rendering hardening, safer JSONL import parsing, and import quarantine metadata with line-number provenance. Next: add media capability checks and browser/CSP warnings. Do not implement LLM/SLM provider generation yet. Keep changes small and verify against live GitHub before committing.
 ```
