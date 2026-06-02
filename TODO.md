@@ -12,6 +12,22 @@ Do not skip the chassis work. The weird engine goes back in only after the wirin
 
 ---
 
+## Current verification status
+
+Testing has not been run yet.
+
+The docs spine and safe foundation are in place, but runtime behavior is still unverified until Phase 0 and Phase 2 checks are completed.
+
+Current assumption:
+
+```text
+Proceed carefully from an untested foundation.
+```
+
+This means new work can continue, but every code change should favor small commits, clear failure states, and easy rollback until the browser smoke tests and manual QA pass.
+
+---
+
 ## Completed foundation
 
 Core app files now in place:
