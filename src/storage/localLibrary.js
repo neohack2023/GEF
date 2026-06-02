@@ -43,8 +43,34 @@ export function appendTelemetry(record) {
   return all;
 }
 
-export function importTelemetryRows(rows) {
-  const all = [...getTelemetry(), ...rows];
+function wrapImportedRows(rows, metadata = {}) {
+  const importedAt = metadata.importedAt || new Date().toISOString();
+  const fileName = metadata.fileName || 'unknown-jsonl-import';
+  const parserVersion = metadata.parserVersion || 'gef-jsonl-import-v1';
+
+  return rows.map((entry, index) => {
+    const row = entry && entry.row && typeof entry.row === 'object' ? entry.row : entry;
+    const lineNumber = Number.isInteger(entry?.lineNumber) ? entry.lineNumber : index + 1;
+
+    return {
+      ...row,
+      _gefImport: {
+        state: 'quarantined',
+        importedAt,
+        fileName,
+        lineNumber,
+        originalIndex: index,
+        parserVersion,
+        schemaStatus: 'unvalidated',
+        reviewed: false
+      }
+    };
+  });
+}
+
+export function importTelemetryRows(rows, metadata = {}) {
+  const importedRows = wrapImportedRows(rows, metadata);
+  const all = [...getTelemetry(), ...importedRows];
   writeJson(TELEMETRY_KEY, all);
   return all;
 }
