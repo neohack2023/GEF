@@ -26,6 +26,7 @@ Observed so far:
 - [x] Studio, Foundry, and Library tabs switch.
 - [x] Preset and Foundry log rendering now use DOM nodes and `textContent` for user/log text.
 - [x] JSONL import now has file size, row count, line length, line-by-line parsing, and partial failure reporting.
+- [x] Imported JSONL rows now start quarantined with `_gefImport` metadata and original source line numbers.
 - [ ] Full local laptop smoke test is still pending.
 - [ ] Laptop Edge showed browser/CSP-style blocking around `blob:` media and a stale/optional Pyodide source-map request.
 - [ ] Need confirm whether laptop issue is cache, Edge policy, CSP, extension, or local browser configuration.
@@ -142,7 +143,7 @@ Tasks:
 - [x] Harden autopilot log rendering against imported text injection.
 - [x] Add JSONL import size limits.
 - [x] Add line-by-line JSONL parsing with partial failure reporting.
-- [ ] Add import quarantine state for telemetry/dataset rows.
+- [x] Add import quarantine state for telemetry/dataset rows.
 - [ ] Add feature detection for `MediaRecorder`.
 - [ ] Add feature detection for `canvas.captureStream`.
 - [ ] Add feature detection for `navigator.mediaDevices.getUserMedia`.
@@ -156,6 +157,8 @@ Recent Phase 1 commits:
 ```text
 a0e27f2090377e4a1a75c1cc52d309c9e1ce9611 - Harden preset and Foundry log rendering
 56ea53725170ef928b294d3c4ed722c9d9bd4997 - Add safer JSONL import parsing
+cbe43e8cf5fc3e1c7dd47a462f4006376bfd3604 - Add telemetry import quarantine state
+8876d2b7c6f7a8e4223235040577d789736055ca - Preserve JSONL import line numbers
 ```
 
 Regression tests to add later:
@@ -165,6 +168,8 @@ unsafe preset name does not execute
 invalid JSONL does not poison local storage
 mixed JSONL imports valid rows and reports bad lines
 oversized JSONL file is blocked
+imported JSONL rows receive _gefImport.state = "quarantined"
+imported JSONL rows preserve original source line number
 sandbox panic always returns to stable renderer
 unsupported media APIs fail with a visible status message
 blob media blocked by CSP reports a useful status message
@@ -466,9 +471,11 @@ Manual pass:
 - [ ] Save a preset.
 - [ ] Reload and load preset.
 - [ ] Export telemetry JSONL.
-- [ ] Import valid JSONL.
+- [ ] Import valid JSONL as quarantined rows.
 - [ ] Try invalid JSONL.
-- [ ] Import mixed valid/invalid JSONL and confirm valid rows are kept while bad lines are reported.
+- [ ] Import mixed valid/invalid JSONL and confirm valid rows are kept as quarantined while bad lines are reported.
+- [ ] Confirm imported rows include `_gefImport.state = "quarantined"`.
+- [ ] Confirm imported rows preserve source line numbers.
 - [ ] Try oversized JSONL and confirm import is blocked.
 - [ ] Snapshot PNG.
 - [ ] Record short WebM where supported.
@@ -509,6 +516,8 @@ Before calling a build stable:
 - [ ] Invalid JSONL import fails safely.
 - [ ] Mixed JSONL imports valid rows and reports bad lines.
 - [ ] Oversized JSONL import is blocked.
+- [ ] Imported JSONL rows start quarantined.
+- [ ] Imported JSONL rows preserve source line numbers.
 - [ ] Unsafe preset names render as text.
 - [ ] Foundry log messages render as text.
 - [ ] No frontend API keys or provider secrets.
@@ -525,19 +534,20 @@ Before calling a build stable:
 1. Local boot verification
 2. User-controlled text hardening
 3. JSONL import quarantine
-4. Test harness
-5. Preset schema implementation
-6. Dataset schema implementation
-7. Memory policy implementation
-8. Audio metrics hardening
-9. Module registry
-10. Recording/export polish
-11. Mock Foundry provider
-12. Provider validation and smoke tests
-13. WebGL adapter
-14. WebGPU adapter
-15. Pyodide adapter
-16. SLM adapter
-17. Cloud provider adapter behind safe boundary
+4. Media capability checks
+5. Test harness
+6. Preset schema implementation
+7. Dataset schema implementation
+8. Memory policy implementation
+9. Audio metrics hardening
+10. Module registry
+11. Recording/export polish
+12. Mock Foundry provider
+13. Provider validation and smoke tests
+14. WebGL adapter
+15. WebGPU adapter
+16. Pyodide adapter
+17. SLM adapter
+18. Cloud provider adapter behind safe boundary
 
 Do not skip straight to provider-backed generation. The renderer needs a strong chassis before the strange engine goes back in.
