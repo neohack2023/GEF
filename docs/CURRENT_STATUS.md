@@ -1,6 +1,6 @@
 # GEF Current Status
 
-Last updated after the import quarantine Phase 1 hardening pass.
+Last updated after the media capability and browser/CSP warning Phase 1 hardening pass.
 
 This file is the quick handoff note for where the repo currently stands. Deeper design rules live in the specific docs; this page is the dashboard sticky note.
 
@@ -128,6 +128,39 @@ Important limitation:
 - There is no promote/reject quarantine workflow yet.
 - Raw telemetry is still not training data.
 
+### Media capability checks and browser/CSP warnings added
+
+Commit:
+
+```text
+13001d7a3c525babfcc7244a83673317500a86db - Add media capability checks
+```
+
+What changed:
+
+- Added media capability detection for:
+  - object URL support
+  - `navigator.mediaDevices.getUserMedia`
+  - `canvas.captureStream`
+  - `MediaRecorder`
+  - `MediaRecorder.isTypeSupported`
+- Added preferred WebM MIME selection before recording.
+- Added boot-time media capability warnings for unsupported media paths.
+- Media upload now fails visibly if object URLs are unsupported.
+- Media upload now reports likely `blob:`/CSP blocking through the status bar.
+- Microphone flow now fails visibly when `getUserMedia` is unavailable, denied, or blocked by browser context.
+- Recording now fails visibly when `canvas.captureStream`, `MediaRecorder`, or object URLs are unavailable.
+- Recording fallback can create a `MediaRecorder` without a MIME type when type detection is unavailable.
+- Object URLs are now cleaned up through a delayed revoke helper for downloads and recording exports.
+- Uploaded media object URLs are revoked before replacing them with a new upload.
+- The media element source is reused instead of creating a new `MediaElementSourceNode` on every upload.
+
+Why it matters:
+
+```text
+Media export and capture paths should fail loudly, not mysteriously.
+```
+
 ---
 
 ## Current implementation limits
@@ -181,31 +214,41 @@ Still pending:
 - training/eval/holdout export gates
 - memory promotion workflow
 
+### Media and browser support
+
+Media support is now feature-detected, but not automatically cross-browser verified.
+
+Still pending:
+
+- manual verification on laptop Edge after clearing cache/site data
+- local-server smoke test
+- Chromium/Firefox/WebKit automated smoke coverage
+- explicit CSP header/meta review for hosted deployment
+
 ---
 
 ## Next recommended build step
 
-Next Phase 1 target:
+Next target:
 
 ```text
-Add media capability checks and browser/CSP warnings
+Finish Phase 0 manual smoke checks, then add the test harness.
 ```
 
 Build goals:
 
-- Feature-detect `navigator.mediaDevices.getUserMedia`.
-- Feature-detect `canvas.captureStream`.
-- Feature-detect `MediaRecorder`.
-- Feature-detect supported WebM mime types before recording.
-- Show clear status messages when recording is unsupported.
-- Show clear status messages when microphone access is unavailable or denied.
-- Show clear status messages when media `blob:` URLs are blocked by browser/CSP policy.
-- Add safer object URL cleanup for media uploads/downloads.
+- Confirm local-server boot.
+- Confirm `src/app.js` loads as an ES module locally.
+- Confirm sandbox toggle and panic reset behavior.
+- Confirm preset save/load/delete behavior.
+- Confirm JSONL export/import behavior after quarantine changes.
+- Confirm media upload/mic/recording behavior on the laptop browser that showed CSP symptoms.
+- Add repeatable Playwright smoke tests after manual checks stabilize.
 
 Why this is next:
 
 ```text
-The Neocities mobile path works, but laptop Edge surfaced browser/CSP behavior. Media paths should fail visibly instead of silently.
+Phase 1 hardening is now mostly in place. The app needs repeatable proof, not more theoretical armor plating.
 ```
 
 ---
@@ -242,8 +285,10 @@ Test checklist:
 - Oversized JSONL is blocked.
 - Imported rows include `_gefImport.state = "quarantined"` and a source line number.
 - Media upload works where browser policy allows it.
+- Media upload reports a useful message if `blob:` media is blocked.
 - Microphone path either works or reports denial/unavailable clearly.
 - Recording either works or reports unsupported clearly.
+- Recording export creates a WebM where supported.
 
 ---
 
@@ -252,5 +297,5 @@ Test checklist:
 Use this if resuming later:
 
 ```text
-Continue GEF from CURRENT_STATUS.md. Phase 1 completed so far: preset/Foundry log text rendering hardening, safer JSONL import parsing, and import quarantine metadata with line-number provenance. Next: add media capability checks and browser/CSP warnings. Do not implement LLM/SLM provider generation yet. Keep changes small and verify against live GitHub before committing.
+Continue GEF from CURRENT_STATUS.md. Phase 1 hardening now includes preset/Foundry log text rendering, safer JSONL import parsing, import quarantine metadata with line-number provenance, and media capability/CSP warning checks. Next: finish Phase 0 manual smoke checks, especially sandbox/panic/preset/JSONL/media on local server, then add the test harness. Do not implement LLM/SLM provider generation yet. Keep changes small and verify against live GitHub before committing.
 ```
