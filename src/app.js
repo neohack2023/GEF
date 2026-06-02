@@ -42,6 +42,8 @@ let mediaRecorder = null;
 let recordedChunks = [];
 let isRecording = false;
 let autopilotQueue = [];
+let activeMediaObjectUrl = null;
+let mediaElementSource = null;
 
 function setStatus(text, sandbox = false, timeout = 0) {
   const statusBar = $('status-bar');
@@ -321,13 +323,69 @@ function renderAutopilotLog() {
   });
 }
 
+function revokeObjectUrlLater(url, delay = 1000) {
+  if (!url || !url.startsWith('blob:')) return;
+  window.setTimeout(() => URL.revokeObjectURL(url), delay);
+}
+
 function downloadText(filename, text, type = 'text/plain') {
   const blob = new Blob([text], { type });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = filename;
   a.click();
-  URL.revokeObjectURL(a.href);
+  revokeObjectUrlLater(a.href);
+}
+
+function getMediaCapabilities() {
+  const hasMediaRecorder = typeof MediaRecorder !== 'undefined';
+
+  return {
+    objectUrls: typeof URL !== 'undefined'
+      && typeof URL.createObjectURL === 'function'
+      && typeof URL.revokeObjectURL === 'function',
+    getUserMedia: Boolean(navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function'),
+    captureStream: typeof HTMLCanvasElement !== 'undefined'
+      && typeof HTMLCanvasElement.prototype.captureStream === 'function',
+    mediaRecorder: hasMediaRecorder,
+    mediaRecorderTypeDetection: hasMediaRecorder && typeof MediaRecorder.isTypeSupported === 'function'
+  };
+}
+
+function getPreferredRecordingMimeType(capabilities = getMediaCapabilities()) {
+  if (!capabilities.mediaRecorder || !capabilities.mediaRecorderTypeDetection) return '';
+
+  return [
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm'
+  ].find((type) => MediaRecorder.isTypeSupported(type)) || '';
+}
+
+function describeMediaError(error) {
+  if (!error) return 'unknown browser media error';
+  return error.message || error.name || 'unknown browser media error';
+}
+
+function warnForMissingMediaCapabilities() {
+  const capabilities = getMediaCapabilities();
+  const missing = [];
+
+  if (!capabilities.objectUrls) missing.push('object URLs');
+  if (!capabilities.getUserMedia) missing.push('microphone capture');
+  if (!capabilities.captureStream) missing.push('canvas recording');
+  if (!capabilities.mediaRecorder) missing.push('MediaRecorder');
+
+  if (missing.length) {
+    setStatus(`Media warning: unsupported ${missing.join(', ')}. Some media paths will be disabled.`, false, 6000);
+  }
+}
+
+function resetActiveMediaObjectUrl() {
+  if (activeMediaObjectUrl) {
+    URL.revokeObjectURL(activeMediaObjectUrl);
+    activeMediaObjectUrl = null;
+  }
 }
 
 function bindUi() {
@@ -548,32 +606,68 @@ function bindMediaControls() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const capabilities = getMediaCapabilities();
+    if (!capabilities.objectUrls) {
+      setStatus('Media upload unavailable: object URLs are not supported in this browser.', false, 4000);
+      event.target.value = '';
+      return;
+    }
+
     await audio.init();
     const mediaPlayer = $('media-player');
-    mediaPlayer.src = URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    resetActiveMediaObjectUrl();
+    activeMediaObjectUrl = objectUrl;
+    mediaPlayer.src = objectUrl;
+    mediaPlayer.onerror = () => {
+      setStatus('Media load failed. Browser or CSP may be blocking blob: media URLs. Check media-src blob:.', false, 6000);
+    };
 
+    let playbackStarted = true;
     try {
       await mediaPlayer.play();
-    } catch {}
+    } catch (error) {
+      playbackStarted = false;
+      setStatus(`Media loaded but playback was blocked: ${describeMediaError(error)}. Press Play or check media-src blob:.`, false, 5000);
+    }
 
-    audio.route(audio.ctx.createMediaElementSource(mediaPlayer), false);
-    $('playback-controls').style.display = 'block';
-    setStatus(`Loaded media: ${file.name}`, false, 1400);
+    try {
+      if (!mediaElementSource) {
+        mediaElementSource = audio.ctx.createMediaElementSource(mediaPlayer);
+      }
+      audio.route(mediaElementSource, false);
+      $('playback-controls').style.display = 'block';
+      if (playbackStarted) setStatus(`Loaded media: ${file.name}`, false, 1400);
+    } catch (error) {
+      setStatus(`Media audio routing failed: ${describeMediaError(error)}.`, false, 5000);
+    }
   });
 
   $('btn-mic').addEventListener('click', async () => {
+    const capabilities = getMediaCapabilities();
+    if (!capabilities.getUserMedia) {
+      setStatus('Microphone unavailable: getUserMedia is not supported in this browser or context.', false, 5000);
+      return;
+    }
+
     await audio.init();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audio.route(audio.ctx.createMediaStreamSource(stream), true);
       $('playback-controls').style.display = 'block';
       setStatus('Microphone input active.', false, 1400);
-    } catch {
-      setStatus('Microphone access denied.', false, 2500);
+    } catch (error) {
+      setStatus(`Microphone unavailable: ${describeMediaError(error)}. Check browser permissions and secure context.`, false, 5000);
     }
   });
 
-  $('btn-play').addEventListener('click', () => $('media-player').play());
+  $('btn-play').addEventListener('click', async () => {
+    try {
+      await $('media-player').play();
+    } catch (error) {
+      setStatus(`Playback failed: ${describeMediaError(error)}. Check media-src blob: policy.`, false, 5000);
+    }
+  });
   $('btn-pause').addEventListener('click', () => $('media-player').pause());
   $('btn-stop').addEventListener('click', () => {
     $('media-player').pause();
@@ -599,20 +693,30 @@ function bindMediaControls() {
       return;
     }
 
+    const capabilities = getMediaCapabilities();
+    if (!capabilities.captureStream) {
+      setStatus('Recording unsupported: canvas.captureStream is unavailable in this browser.', false, 5000);
+      return;
+    }
+    if (!capabilities.mediaRecorder) {
+      setStatus('Recording unsupported: MediaRecorder is unavailable in this browser.', false, 5000);
+      return;
+    }
+    if (!capabilities.objectUrls) {
+      setStatus('Recording export unsupported: object URLs are unavailable in this browser.', false, 5000);
+      return;
+    }
+
     try {
       const canvas = runtime.drawComposite(window.innerWidth, window.innerHeight);
       const videoStream = canvas.captureStream(30);
       const audioTracks = audio.streamDestination ? audio.streamDestination.stream.getAudioTracks() : [];
       const combinedStream = new MediaStream([...videoStream.getVideoTracks(), ...audioTracks]);
+      const mimeType = getPreferredRecordingMimeType(capabilities);
+      const recorderOptions = { videoBitsPerSecond: 8000000 };
+      if (mimeType) recorderOptions.mimeType = mimeType;
 
-      let mimeType = 'video/webm';
-      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) mimeType = 'video/webm;codecs=vp9,opus';
-      else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) mimeType = 'video/webm;codecs=vp8,opus';
-
-      mediaRecorder = new MediaRecorder(combinedStream, {
-        mimeType,
-        videoBitsPerSecond: 8000000
-      });
+      mediaRecorder = new MediaRecorder(combinedStream, recorderOptions);
 
       recordedChunks = [];
       mediaRecorder.ondataavailable = (event) => {
@@ -620,13 +724,14 @@ function bindMediaControls() {
       };
       mediaRecorder.onstop = () => {
         combinedStream.getTracks().forEach((track) => track.stop());
-        const blob = new Blob(recordedChunks, { type: mimeType });
+        const outputType = mimeType || 'video/webm';
+        const blob = new Blob(recordedChunks, { type: outputType });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `gef_capture_${Date.now()}.webm`;
         a.click();
-        URL.revokeObjectURL(url);
+        revokeObjectUrlLater(url);
       };
 
       isRecording = true;
@@ -636,7 +741,7 @@ function bindMediaControls() {
       setStatus('Recording started.', false, 1200);
     } catch (error) {
       isRecording = false;
-      setStatus(`Recording failed: ${error.message}`, false, 3000);
+      setStatus(`Recording failed: ${describeMediaError(error)}. Check capture support and CSP blob policies.`, false, 6000);
     }
   });
 }
@@ -678,6 +783,7 @@ function boot() {
   renderModuleStack();
   renderAutopilotLog();
   setStatus('STABLE ENGINE ACTIVE');
+  window.setTimeout(warnForMissingMediaCapabilities, 300);
   requestAnimationFrame(renderEngine);
 }
 
