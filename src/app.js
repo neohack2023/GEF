@@ -192,7 +192,7 @@ function parseTelemetryJsonl(text, limits = JSONL_IMPORT_LIMITS) {
         errors.push({ line: lineNumber, message: 'Line must be a JSON object.' });
         continue;
       }
-      rows.push(row);
+      rows.push({ row, lineNumber });
     } catch (error) {
       errors.push({ line: lineNumber, message: error.message || 'Invalid JSON.' });
     }
@@ -208,10 +208,10 @@ function summarizeJsonlImport(rows, errors, totalRows) {
       .map((error) => `line ${error.line}: ${error.message}`)
       .join('; ');
     const more = errors.length > JSONL_IMPORT_LIMITS.maxReportedErrors ? `; +${errors.length - JSONL_IMPORT_LIMITS.maxReportedErrors} more` : '';
-    return `Imported ${rows.length} rows, rejected ${errors.length}. ${firstErrors}${more}`;
+    return `Imported ${rows.length} quarantined rows, rejected ${errors.length}. ${firstErrors}${more}`;
   }
 
-  if (rows.length) return `Imported ${rows.length} telemetry rows. Total: ${totalRows}.`;
+  if (rows.length) return `Imported ${rows.length} quarantined telemetry rows. Total: ${totalRows}.`;
   if (errors.length) return `Import rejected ${errors.length} lines. First error line ${errors[0].line}: ${errors[0].message}`;
   return 'No JSONL rows found.';
 }
@@ -522,7 +522,11 @@ function bindUi() {
       const { rows, errors } = parseTelemetryJsonl(ev.target.result);
 
       if (rows.length) {
-        const all = importTelemetryRows(rows);
+        const all = importTelemetryRows(rows, {
+          fileName: file.name,
+          importedAt: new Date().toISOString(),
+          parserVersion: 'gef-jsonl-import-v1'
+        });
         $('dataset-count').innerText = all.length;
         setStatus(summarizeJsonlImport(rows, errors, all.length), false, errors.length ? 5000 : 1800);
       } else {
