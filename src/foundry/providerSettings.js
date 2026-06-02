@@ -133,7 +133,7 @@ function saveProviderSettings() {
 
   const saved = writeProviderSettings(settings);
   renderProviderSettings(saved);
-  setStatus('Provider settings saved. Credentials stay outside the frontend.', false, 2800);
+  setStatus('Provider settings saved. Credentials stay outside the frontend.', 2800);
 }
 
 async function copyProviderContract() {
@@ -141,9 +141,9 @@ async function copyProviderContract() {
 
   try {
     await navigator.clipboard.writeText(contract);
-    setStatus('Provider proxy contract copied.', false, 1800);
+    setStatus('Provider proxy contract copied.', 1800);
   } catch {
-    setStatus('Clipboard unavailable. Copy provider contract from docs when added.', false, 3000);
+    setStatus('Clipboard unavailable. Copy provider contract from docs when added.', 3000);
   }
 }
 
