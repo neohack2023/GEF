@@ -1,338 +1,330 @@
-# GEF Sandbox Compiler v2.3 TODO
+# GEF TODO
 
-Build map for growing the current modular safe foundation back toward the original Autopilot Forge plan.
+Current build map for growing GEF from the safe Canvas2D foundation toward the larger audio-reactive Foundry vision.
 
-Current foundation already in place:
+Core rule:
 
-- `index.html` root shell
-- `src/styles.css`
-- `src/app.js`
-- `src/audio/analyzer.js`
-- `src/core/constants.js`
-- `src/render/visualModules.js`
-- `src/render/canvasRuntime.js`
-- `src/storage/localLibrary.js`
-- `src/autopilot/autopilotStub.js`
+```text
+Models may suggest. Validators decide. Users promote.
+```
+
+Do not skip the chassis work. The weird engine goes back in only after the wiring is labeled.
 
 ---
 
-## Phase 0 — Smoke test the modular shell
+## Completed foundation
 
-Goal: confirm the current app boots cleanly from local static hosting.
+Core app files now in place:
+
+- [x] `index.html` root shell
+- [x] `src/styles.css`
+- [x] `src/app.js`
+- [x] `src/audio/analyzer.js`
+- [x] `src/core/constants.js`
+- [x] `src/render/visualModules.js`
+- [x] `src/render/canvasRuntime.js`
+- [x] `src/storage/localLibrary.js`
+- [x] `src/autopilot/autopilotStub.js`
+
+Core docs now in place:
+
+- [x] `README.md` project landing page
+- [x] `docs/README.md` docs index
+- [x] `docs/ARCHITECTURE.md`
+- [x] `docs/SECURITY.md`
+- [x] `docs/AUDIO_METRICS.md`
+- [x] `docs/PRESET_FORMAT.md`
+- [x] `docs/DATASET_FORMAT.md`
+- [x] `docs/MEMORY_POLICY.md`
+- [x] `docs/TESTING.md`
+- [x] `docs/SLM_OPTION_PLAN.md`
+- [x] `docs/FEEDBACK_MEMORY_SYSTEM.md`
+
+Current app capabilities:
+
+- [x] Canvas2D visual runtime
+- [x] curated visual module catalog
+- [x] sandbox preview canvas
+- [x] stable main canvas
+- [x] feedback/composite canvas path
+- [x] audio metrics: bass, mid, treble, beat, glitch, centroid, RMS
+- [x] media upload path
+- [x] microphone path
+- [x] snapshot path
+- [x] WebM capture path
+- [x] local preset save/load/delete
+- [x] telemetry JSONL export/import baseline
+- [x] safe Foundry/Autopilot stub
+
+---
+
+## Phase 0 - Verify the current shell
+
+Goal: prove the current static browser app boots and survives basic interaction before deeper refactors.
 
 Tasks:
 
-- [ ] Run the app from a local server, not directly from `file://`.
+- [ ] Run from a local server, not `file://`.
 - [ ] Confirm `src/app.js` loads as an ES module.
-- [ ] Confirm canvas renders the default Void Core visual.
+- [ ] Confirm default `voidCore` render appears.
+- [ ] Confirm meters render at zero without audio.
 - [ ] Confirm sliders update labels.
-- [ ] Confirm tabs switch correctly.
-- [ ] Confirm local presets save and reload.
-- [ ] Confirm JSONL telemetry export downloads.
+- [ ] Confirm Studio, Foundry, and Library tabs switch.
+- [ ] Confirm sandbox toggle works.
+- [ ] Confirm panic reset clears sandbox state.
+- [ ] Confirm save/load/delete preset flow works.
+- [ ] Confirm telemetry export downloads JSONL.
+- [ ] Confirm invalid JSONL import fails safely.
+- [ ] Confirm app reload does not break saved local state.
 
-Snippet:
+Command:
 
 ```bash
 python -m http.server 8080
 ```
 
-Then open:
+Open:
 
 ```text
 http://localhost:8080
 ```
 
-Useful references:
-
-- MDN JavaScript modules: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules
-- Vite getting started, optional later dev server: https://vite.dev/guide/
-
 ---
 
-## Phase 1 — Harden the audio metric engine
+## Phase 1 - Immediate safety hardening
 
-Goal: make the audio analysis layer predictable enough to drive visuals, recording, and later prompt/telemetry work.
+Goal: remove the sharpest browser and import risks before building more memory, dataset, or provider features.
 
 Tasks:
 
-- [ ] Add a debug panel that prints raw numeric metrics.
-- [ ] Add peak-hold values for bass, mid, treble, glitch, centroid, and rms.
-- [ ] Add configurable frequency-bin ranges instead of hardcoded bass/mid/treble split points.
-- [ ] Add a simple beat cooldown so `beat` does not chatter during dense bass passages.
-- [ ] Add track-position telemetry for media playback.
-- [ ] Add an analyzer reset button.
+- [ ] Replace user/import-controlled `innerHTML` render paths with DOM construction and `textContent`.
+- [ ] Harden preset card rendering against HTML/script injection.
+- [ ] Harden autopilot log rendering against imported text injection.
+- [ ] Add JSONL import size limits.
+- [ ] Add line-by-line JSONL parsing with partial failure reporting.
+- [ ] Add import quarantine state for telemetry/dataset rows.
+- [ ] Add feature detection for `MediaRecorder`.
+- [ ] Add feature detection for `canvas.captureStream`.
+- [ ] Add feature detection for `navigator.mediaDevices.getUserMedia`.
+- [ ] Add safer object URL cleanup for media upload and downloads.
+- [ ] Add visible warning when recording is unsupported.
+- [ ] Add visible warning when microphone is unavailable or denied.
 
-Snippet: configurable frequency bands.
+Regression tests to add later:
 
-```js
-const bands = {
-  bass: [0, 10],
-  mid: [10, 70],
-  treble: [70, 200]
-};
-
-function averageBand(dataArray, start, end, audioSense = 1) {
-  let total = 0;
-  const safeEnd = Math.min(end, dataArray.length);
-  for (let i = start; i < safeEnd; i++) {
-    total += (dataArray[i] / 255) * audioSense;
-  }
-  return total / Math.max(1, safeEnd - start);
-}
+```text
+unsafe preset name does not execute
+invalid JSONL does not poison local storage
+sandbox panic always returns to stable renderer
+unsupported media APIs fail with a visible status message
 ```
-
-Useful references:
-
-- MDN `AnalyserNode.getByteFrequencyData()`: https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode/getByteFrequencyData
-- MDN `AudioContext`: https://developer.mozilla.org/en-US/docs/Web/API/AudioContext
-- MDN Web Audio API guide: https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API
 
 ---
 
-## Phase 2 — Expand the curated visual module system
+## Phase 2 - Developer tooling and test harness
 
-Goal: build a safe module catalog before restoring live compiler adapters.
+Goal: give the project a repeatable test loop.
+
+Tasks:
+
+- [ ] Add `package.json`.
+- [ ] Add Vite or a simple static dev server script.
+- [ ] Add ESLint.
+- [ ] Add Prettier.
+- [ ] Add Playwright.
+- [ ] Add `/tests` folder.
+- [ ] Add boot smoke test.
+- [ ] Add sandbox panic test.
+- [ ] Add preset save/load test.
+- [ ] Add JSONL import/export test.
+- [ ] Add media unsupported-path tests.
+- [ ] Add security grep script for `eval`, `new Function`, `apiKey`, `secret`, and `token`.
+- [ ] Add GitHub Actions workflow for tests.
+
+Suggested layout:
+
+```text
+tests/
+  unit/
+  e2e/
+  fixtures/
+  helpers/
+```
+
+First useful scripts:
+
+```json
+{
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "test:e2e": "playwright test",
+    "check:syntax": "node --check src/app.js && node --check src/audio/analyzer.js && node --check src/render/canvasRuntime.js && node --check src/storage/localLibrary.js",
+    "check:security": "grep -R \"new Function\\|eval(\\|apiKey\\|secret\\|token\" src index.html || true"
+  }
+}
+```
+
+---
+
+## Phase 3 - Preset format implementation
+
+Goal: make `PRESET_FORMAT.md` real in code while keeping legacy saves loadable.
+
+Tasks:
+
+- [ ] Add `src/storage/presetFormat.js`.
+- [ ] Add `schemaName: "gef-preset"` and `schemaVersion: 1` to new saves.
+- [ ] Add stable preset IDs.
+- [ ] Add `createdAt` and `updatedAt`.
+- [ ] Add legacy v0 migration.
+- [ ] Validate module IDs against module catalog.
+- [ ] Clamp numeric UI values.
+- [ ] Force imported presets to `promoteOnLoad = false`.
+- [ ] Add single preset export.
+- [ ] Add single preset import.
+- [ ] Add preset-pack export/import later.
+- [ ] Add read-only state for missing required adapters.
+
+Safety rule:
+
+```text
+Preset imports restore configuration, not runtime authority.
+```
+
+---
+
+## Phase 4 - Dataset format implementation
+
+Goal: turn raw telemetry into structured feedback rows without treating raw logs as training data.
+
+Tasks:
+
+- [ ] Add `src/telemetry/eventTypes.js`.
+- [ ] Add `src/telemetry/datasetWriter.js`.
+- [ ] Add `src/telemetry/jsonlExport.js`.
+- [ ] Add `src/telemetry/datasetSchemas.js`.
+- [ ] Add `migrateLegacyTelemetryV0()`.
+- [ ] Add `gef-feedback-row-v1` row builder.
+- [ ] Add source/trust fields.
+- [ ] Add quality fields.
+- [ ] Add privacy fields.
+- [ ] Add split fields: raw, train, validation, eval, holdout, quarantine, archive.
+- [ ] Add export variants: raw local, clean feedback, train-ready, eval set, quarantine review.
+- [ ] Add dataset-card export template.
+
+Safety rule:
+
+```text
+Raw telemetry is not training data.
+```
+
+---
+
+## Phase 5 - Memory policy implementation
+
+Goal: make memory useful, small, explainable, and erasable.
+
+Tasks:
+
+- [ ] Add `src/memory/feedbackStore.js`.
+- [ ] Add `src/memory/memorySchemas.js`.
+- [ ] Add `src/memory/memoryManager.js`.
+- [ ] Add `src/memory/scoring.js`.
+- [ ] Add memory clear/export controls.
+- [ ] Add working-memory row cap.
+- [ ] Add import quarantine review flow.
+- [ ] Add memory decay/expiration cleanup.
+- [ ] Add distilled memory store.
+- [ ] Add memory retrieval pack builder for SLM/router use.
+- [ ] Add deletion cascade for derived memories.
+- [ ] Move larger memory stores to IndexedDB.
+
+Safety rule:
+
+```text
+Deletion beats retention.
+```
+
+---
+
+## Phase 6 - Audio metrics hardening
+
+Goal: make audio metrics stable enough for visuals, telemetry, and future model context.
+
+Tasks:
+
+- [ ] Add audio debug panel with raw numeric metrics.
+- [ ] Add peak-hold values for bass, mid, treble, glitch, centroid, and RMS.
+- [ ] Split audio math into testable pure helpers.
+- [ ] Add configurable frequency-bin ranges.
+- [ ] Add Hz-based band mapping using sample rate.
+- [ ] Add beat cooldown.
+- [ ] Add analyzer reset button.
+- [ ] Add track-position telemetry for media playback.
+- [ ] Add audio snapshot row for accepted/rejected previews.
+- [ ] Add fake-buffer unit tests for bass, centroid, RMS, beat, and glitch.
+
+Safety rule:
+
+```text
+Visual metrics should be stable before they are clever.
+```
+
+---
+
+## Phase 7 - Module registry and curated visual expansion
+
+Goal: strengthen curated modules before generated or imported modules return.
 
 Tasks:
 
 - [ ] Add `src/render/moduleRegistry.js`.
-- [ ] Move module metadata out of `visualModules.js` into a registry.
-- [ ] Add module categories: `base`, `overlay`, `post_fx`, `feedback`, `hud`.
+- [ ] Move module metadata out of `visualModules.js`.
 - [ ] Add per-module parameter schemas.
-- [ ] Add module enable/disable persistence in presets.
-- [ ] Add a mini inspector for each module.
+- [ ] Add module categories: base, overlay, post_fx, feedback, hud.
+- [ ] Add module order persistence.
+- [ ] Add module inspector UI.
+- [ ] Add module parameter controls.
+- [ ] Add validation for module stage and params.
+- [ ] Add at least 3 new curated Canvas2D modules.
+- [ ] Add visual smoke tests for every curated module.
 
-Snippet: module contract.
-
-```js
-export const moduleContract = {
-  id: 'spectralGrid',
-  name: 'Spectral Grid',
-  stage: 'OVERLAY',
-  defaults: {
-    opacity: 0.75,
-    density: 1.0,
-    blendMode: 'screen'
-  },
-  render(ctx, w, h, time, audio, resources) {
-    // draw here
-  }
-};
-```
-
-Snippet: registry helper.
-
-```js
-const registry = new Map();
-
-export function registerModule(moduleDef) {
-  if (!moduleDef?.id || typeof moduleDef.render !== 'function') {
-    throw new Error('Invalid visual module definition.');
-  }
-  registry.set(moduleDef.id, moduleDef);
-}
-
-export function getModule(id) {
-  return registry.get(id) || null;
-}
-
-export function listModules() {
-  return [...registry.values()];
-}
-```
-
-Useful references:
-
-- MDN Canvas API: https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API
-- MDN `CanvasRenderingContext2D`: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D
-
----
-
-## Phase 3 — Add the WebGL adapter
-
-Goal: restore the GLSL lane as a dedicated module instead of mixing shader code into the app shell.
-
-Target file:
+Safety rule:
 
 ```text
-src/render/glslRuntime.js
+Curated modules first. Generated modules later.
 ```
-
-Tasks:
-
-- [ ] Create `GlslRuntime` class.
-- [ ] Add shader compile diagnostics.
-- [ ] Add uniform binding for `time`, `resolution`, and audio metrics.
-- [ ] Add fallback if WebGL is unavailable.
-- [ ] Add one default GLSL Void shader.
-- [ ] Add `webglcontextlost` and `webglcontextrestored` handling.
-
-Snippet: compile shader helper.
-
-```js
-function compileShader(gl, type, source) {
-  const shader = gl.createShader(type);
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    const message = gl.getShaderInfoLog(shader) || 'Unknown shader compile error.';
-    gl.deleteShader(shader);
-    throw new Error(message);
-  }
-
-  return shader;
-}
-```
-
-Useful references:
-
-- MDN WebGL API: https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API
-- MDN WebGL best practices: https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
-- WebGL Fundamentals: https://webglfundamentals.org/
 
 ---
 
-## Phase 4 — Add the WebGPU / WGSL adapter
+## Phase 8 - Recording and export polish
 
-Goal: restore the WGSL lane with clean feature detection and graceful fallback.
-
-Target file:
-
-```text
-src/render/webgpuRuntime.js
-```
+Goal: make capture reliable and explainable.
 
 Tasks:
 
-- [ ] Create `WebGpuRuntime` class.
-- [ ] Add `navigator.gpu` support check.
-- [ ] Request adapter and device only once.
-- [ ] Configure canvas context with preferred format.
-- [ ] Add uniform buffer layout for resolution, time, speed, and audio metrics.
-- [ ] Add shader module diagnostics.
-- [ ] Fall back to Canvas2D if WebGPU is unavailable.
-
-Snippet: WebGPU device init.
-
-```js
-export async function initWebGpu(canvas) {
-  if (!navigator.gpu) {
-    throw new Error('WebGPU is not supported in this browser.');
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-  if (!adapter) {
-    throw new Error('No WebGPU adapter was available.');
-  }
-
-  const device = await adapter.requestDevice();
-  const format = navigator.gpu.getPreferredCanvasFormat();
-  const context = canvas.getContext('webgpu');
-
-  context.configure({
-    device,
-    format,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC
-  });
-
-  return { adapter, device, format, context };
-}
-```
-
-Useful references:
-
-- MDN WebGPU API: https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API
-- MDN `GPUDevice.createShaderModule()`: https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createShaderModule
-- W3C WGSL specification: https://www.w3.org/TR/WGSL/
-
----
-
-## Phase 5 — Restore Pyodide as an optional adapter
-
-Goal: bring back Python rendering without loading Pyodide unless the user selects Python.
-
-Target file:
-
-```text
-src/python/pyodideRuntime.js
-```
-
-Tasks:
-
-- [ ] Lazy-load Pyodide only when Python lane is selected.
-- [ ] Add a loading state in the UI.
-- [ ] Bind `ctx`, `w`, `h`, `time`, `speed`, and audio metrics into Python globals.
-- [ ] Require a `render_frame()` function in Python snippets.
-- [ ] Add error capture and diagnostics.
-- [ ] Keep Python adapter isolated from the main render loop when inactive.
-
-Snippet: lazy Pyodide loader.
-
-```js
-let pyodidePromise = null;
-
-export function loadPyodideOnce() {
-  if (!pyodidePromise) {
-    pyodidePromise = globalThis.loadPyodide();
-  }
-  return pyodidePromise;
-}
-```
-
-Useful references:
-
-- Pyodide JavaScript API: https://pyodide.org/en/stable/usage/api/js-api.html
-- Pyodide loading packages: https://pyodide.org/en/stable/usage/loading-packages.html
-
----
-
-## Phase 6 — Upgrade recording and export tools
-
-Goal: make captures reliable for long visual sessions.
-
-Tasks:
-
-- [ ] Add recording status timer.
-- [ ] Add bitrate selector.
+- [ ] Add recording timer.
 - [ ] Add FPS selector: 24, 30, 60.
+- [ ] Add bitrate selector.
+- [ ] Add canvas export size selector: viewport, 1080p, 4K.
 - [ ] Add warning if no audio stream is routed.
-- [ ] Add cleanup for object URLs.
-- [ ] Add canvas-size export options: viewport, 1080p, 4K.
-- [ ] Add capture metadata JSON export next to the video.
+- [ ] Add capture metadata JSON export.
+- [ ] Add snapshot metadata JSON export.
+- [ ] Revoke object URLs after safe delay.
+- [ ] Add tests for unsupported recorder path.
+- [ ] Add tests for unsupported captureStream path.
 
-Snippet: stable canvas recording baseline.
+Safety rule:
 
-```js
-const videoStream = canvas.captureStream(30);
-const audioTracks = audioAnalyzer.streamDestination
-  ? audioAnalyzer.streamDestination.stream.getAudioTracks()
-  : [];
-
-const combinedStream = new MediaStream([
-  ...videoStream.getVideoTracks(),
-  ...audioTracks
-]);
-
-const recorder = new MediaRecorder(combinedStream, {
-  mimeType: 'video/webm;codecs=vp9,opus',
-  videoBitsPerSecond: 8000000
-});
-
-recorder.start(1000);
+```text
+Media export should fail loudly, not mysteriously.
 ```
-
-Useful references:
-
-- MDN `HTMLCanvasElement.captureStream()`: https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/captureStream
-- MDN `MediaRecorder`: https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder
-- MDN `MediaStream`: https://developer.mozilla.org/en-US/docs/Web/API/MediaStream
 
 ---
 
-## Phase 7 — Build a reviewed Foundry adapter layer
+## Phase 9 - Foundry provider architecture
 
-Goal: prepare the old Autopilot idea without wiring remote output directly into the runtime.
+Goal: restore the Autopilot idea as reviewed provider suggestions, not direct runtime authority.
 
 Target files:
 
@@ -341,166 +333,142 @@ src/foundry/foundryProvider.js
 src/foundry/foundryQueue.js
 src/foundry/foundryValidator.js
 src/foundry/foundrySmokeTest.js
+src/foundry/foundrySchemas.js
 ```
-
-Rules:
-
-- [ ] No API keys in committed frontend code.
-- [ ] Use provider interfaces instead of hardcoded services.
-- [ ] Store provider configuration locally or route through a backend proxy.
-- [ ] Validate returned module shape before preview.
-- [ ] Preview in sandbox only.
-- [ ] Never auto-commit a generated visual without user approval.
-- [ ] Log prompt, stage, validation result, and user feedback.
-
-Snippet: provider interface.
-
-```js
-export class FoundryProvider {
-  async generateModule(request) {
-    throw new Error('Provider must implement generateModule(request).');
-  }
-}
-```
-
-Snippet: safe request shape.
-
-```js
-const request = {
-  stage: 'OVERLAY',
-  prompt: 'audio-reactive spectral grid with bass-driven deformation',
-  allowedApis: ['CanvasRenderingContext2D'],
-  requiredArgs: ['ctx', 'w', 'h', 'time', 'audio', 'resources']
-};
-```
-
-Snippet: validate module definition.
-
-```js
-export function validateModuleDefinition(moduleDef) {
-  const errors = [];
-
-  if (!moduleDef || typeof moduleDef !== 'object') errors.push('Module must be an object.');
-  if (!moduleDef.id || typeof moduleDef.id !== 'string') errors.push('Missing string id.');
-  if (!moduleDef.name || typeof moduleDef.name !== 'string') errors.push('Missing string name.');
-  if (!moduleDef.stage || typeof moduleDef.stage !== 'string') errors.push('Missing string stage.');
-  if (typeof moduleDef.render !== 'function') errors.push('Missing render function.');
-
-  return {
-    ok: errors.length === 0,
-    errors
-  };
-}
-```
-
-Useful references:
-
-- MDN Fetch API: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
-- MDN Content Security Policy overview: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
-- OWASP client-side security: https://owasp.org/www-project-top-ten-client-side-security-risks/
-
----
-
-## Phase 8 — Add diagnostics, tests, and developer tooling
-
-Goal: make the project easier to debug before it grows teeth.
 
 Tasks:
 
-- [ ] Add `package.json`.
-- [ ] Add Vite dev server.
-- [ ] Add ESLint.
-- [ ] Add Prettier.
-- [ ] Add a `/tests` folder.
-- [ ] Add smoke tests for audio analyzer math.
-- [ ] Add smoke tests for module registry validation.
-- [ ] Add browser sanity checklist to `docs/TESTING.md`.
+- [ ] Define provider request schema.
+- [ ] Define provider response schema.
+- [ ] Add mock provider first.
+- [ ] Add timeout handling.
+- [ ] Add diagnostics.
+- [ ] Add validation before sandbox preview.
+- [ ] Add bad JSON rejection.
+- [ ] Add unknown module ID rejection.
+- [ ] Add provider failure fallback.
+- [ ] Add prompt injection regression tests.
+- [ ] Add explicit user promotion requirement.
+- [ ] Keep provider secrets out of frontend code.
 
-Suggested file layout:
+Safety rule:
 
 ```text
-src/
-  app.js
-  audio/
-    analyzer.js
-  core/
-    constants.js
-  foundry/
-    foundryProvider.js
-    foundryQueue.js
-    foundryValidator.js
-    foundrySmokeTest.js
-  python/
-    pyodideRuntime.js
-  render/
-    canvasRuntime.js
-    glslRuntime.js
-    moduleRegistry.js
-    visualModules.js
-    webgpuRuntime.js
-  storage/
-    localLibrary.js
-docs/
-  ARCHITECTURE.md
-  TESTING.md
-  SECURITY.md
-```
-
-Useful references:
-
-- Vite guide: https://vite.dev/guide/
-- ESLint getting started: https://eslint.org/docs/latest/use/getting-started
-- Prettier docs: https://prettier.io/docs/
-- Vitest guide: https://vitest.dev/guide/
-
----
-
-## Phase 9 — Add docs for users and future contributors
-
-Goal: make the repo understandable from a cold open.
-
-Tasks:
-
-- [ ] Update `README.md` with current architecture.
-- [ ] Add screenshots or short GIF demos.
-- [ ] Add `docs/ARCHITECTURE.md` explaining render lanes.
-- [ ] Add `docs/SECURITY.md` explaining why Foundry is staged safely.
-- [ ] Add `docs/AUDIO_METRICS.md` explaining how bass, mid, treble, beat, glitch, centroid, and rms are calculated.
-- [ ] Add `docs/PRESET_FORMAT.md` for local save shape.
-
-Snippet: audio metrics doc starter.
-
-```md
-# Audio Metrics
-
-GEF maps Web Audio frequency data into normalized visual control signals.
-
-- bass: average low-frequency bin energy
-- mid: average mid-frequency bin energy
-- treble: average upper-bin energy
-- beat: short bass-energy spike against recent history
-- glitch: positive spectral flux crossing the threshold
-- centroid: weighted average frequency position
-- rms: root-mean-square energy estimate
+Provider output is untrusted text until validated.
 ```
 
 ---
 
-## Phase 10 — Original-plan feature recovery order
+## Phase 10 - Optional render/runtime adapters
 
-Recommended recovery order from safest to spiciest:
+Goal: add future lanes as isolated adapters with detection, validation, fallback, and diagnostics.
 
-1. Canvas2D curated module registry
-2. Preset save/load polish
-3. Audio debug inspector
-4. Recording/export controls
-5. WebGL adapter
-6. WebGPU adapter
-7. Pyodide adapter
-8. Foundry queue and prompt logs
-9. Foundry provider abstraction
-10. Sandbox validation and smoke tests
-11. Manual import of reviewed visual modules
-12. Optional provider-backed generation behind explicit user approval
+Adapters:
 
-Do not skip straight to the Foundry provider. The renderer needs a strong chassis before the weird engine goes back in.
+- [ ] WebGL / GLSL
+- [ ] WebGPU / WGSL
+- [ ] Pyodide / Python
+- [ ] browser-local SLM
+- [ ] localhost SLM
+- [ ] cloud LLM provider through safe adapter/proxy
+
+Every adapter needs:
+
+- [ ] feature detection
+- [ ] schema validation
+- [ ] smoke test
+- [ ] timeout
+- [ ] diagnostics
+- [ ] failure fallback
+- [ ] sandbox isolation
+- [ ] no silent promotion
+
+Safety rule:
+
+```text
+Canvas2D is the stable baseline. Everything else is optional.
+```
+
+---
+
+## Phase 11 - Manual creative QA loop
+
+Goal: keep the app useful as an instrument, not just correct as code.
+
+Manual pass:
+
+- [ ] Load an audio file.
+- [ ] Confirm bass/mid/treble meters react.
+- [ ] Confirm glitch reacts to change.
+- [ ] Toggle sandbox.
+- [ ] Run evolve preview.
+- [ ] Run iterate preview.
+- [ ] Like one preview.
+- [ ] Reject one preview with reason.
+- [ ] Save a preset.
+- [ ] Reload and load preset.
+- [ ] Export telemetry JSONL.
+- [ ] Import valid JSONL.
+- [ ] Try invalid JSONL.
+- [ ] Snapshot PNG.
+- [ ] Record short WebM where supported.
+- [ ] Panic reset.
+- [ ] Confirm stable renderer survives.
+
+QA notes should capture:
+
+```text
+browser
+OS
+viewport
+audio source
+what looked good
+what felt wrong
+whether audio reaction matched expectation
+bugs or console errors
+```
+
+---
+
+## Release readiness checklist
+
+Before calling a build stable:
+
+- [ ] README and docs index are current.
+- [ ] Static syntax checks pass.
+- [ ] App boots from local server.
+- [ ] Stable renderer works with no audio.
+- [ ] Sandbox panic works.
+- [ ] Preset save/load works.
+- [ ] JSONL export works.
+- [ ] Invalid JSONL import fails safely.
+- [ ] No frontend API keys or provider secrets.
+- [ ] No active generated-code execution path.
+- [ ] Security grep reviewed.
+- [ ] Playwright boot test passes in Chromium.
+- [ ] Firefox/WebKit smoke results are documented.
+- [ ] Manual creative QA completed.
+
+---
+
+## Recovery order from safest to spiciest
+
+1. Local boot verification
+2. User-controlled text hardening
+3. JSONL import quarantine
+4. Test harness
+5. Preset schema implementation
+6. Dataset schema implementation
+7. Memory policy implementation
+8. Audio metrics hardening
+9. Module registry
+10. Recording/export polish
+11. Mock Foundry provider
+12. Provider validation and smoke tests
+13. WebGL adapter
+14. WebGPU adapter
+15. Pyodide adapter
+16. SLM adapter
+17. Cloud provider adapter behind safe boundary
+
+Do not skip straight to provider-backed generation. The renderer needs a strong chassis before the strange engine goes back in.
