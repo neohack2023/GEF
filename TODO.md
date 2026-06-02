@@ -27,6 +27,7 @@ Observed so far:
 - [x] Preset and Foundry log rendering now use DOM nodes and `textContent` for user/log text.
 - [x] JSONL import now has file size, row count, line length, line-by-line parsing, and partial failure reporting.
 - [x] Imported JSONL rows now start quarantined with `_gefImport` metadata and original source line numbers.
+- [x] Media paths now feature-detect optional browser APIs and report browser/CSP-style failures visibly.
 - [ ] Full local laptop smoke test is still pending.
 - [ ] Laptop Edge showed browser/CSP-style blocking around `blob:` media and a stale/optional Pyodide source-map request.
 - [ ] Need confirm whether laptop issue is cache, Edge policy, CSP, extension, or local browser configuration.
@@ -144,13 +145,13 @@ Tasks:
 - [x] Add JSONL import size limits.
 - [x] Add line-by-line JSONL parsing with partial failure reporting.
 - [x] Add import quarantine state for telemetry/dataset rows.
-- [ ] Add feature detection for `MediaRecorder`.
-- [ ] Add feature detection for `canvas.captureStream`.
-- [ ] Add feature detection for `navigator.mediaDevices.getUserMedia`.
-- [ ] Add safer object URL cleanup for media upload and downloads.
-- [ ] Add visible warning when recording is unsupported.
-- [ ] Add visible warning when microphone is unavailable or denied.
-- [ ] Add visible warning when media `blob:` URLs are blocked by browser/CSP policy.
+- [x] Add feature detection for `MediaRecorder`.
+- [x] Add feature detection for `canvas.captureStream`.
+- [x] Add feature detection for `navigator.mediaDevices.getUserMedia`.
+- [x] Add safer object URL cleanup for media upload and downloads.
+- [x] Add visible warning when recording is unsupported.
+- [x] Add visible warning when microphone is unavailable or denied.
+- [x] Add visible warning when media `blob:` URLs are blocked by browser/CSP policy.
 
 Recent Phase 1 commits:
 
@@ -159,6 +160,7 @@ a0e27f2090377e4a1a75c1cc52d309c9e1ce9611 - Harden preset and Foundry log renderi
 56ea53725170ef928b294d3c4ed722c9d9bd4997 - Add safer JSONL import parsing
 cbe43e8cf5fc3e1c7dd47a462f4006376bfd3604 - Add telemetry import quarantine state
 8876d2b7c6f7a8e4223235040577d789736055ca - Preserve JSONL import line numbers
+13001d7a3c525babfcc7244a83673317500a86db - Add media capability checks
 ```
 
 Regression tests to add later:
@@ -173,6 +175,8 @@ imported JSONL rows preserve original source line number
 sandbox panic always returns to stable renderer
 unsupported media APIs fail with a visible status message
 blob media blocked by CSP reports a useful status message
+recording unsupported path reports a useful status message
+microphone unavailable path reports a useful status message
 ```
 
 ---
@@ -366,7 +370,7 @@ Tasks:
 - [ ] Add warning if no audio stream is routed.
 - [ ] Add capture metadata JSON export.
 - [ ] Add snapshot metadata JSON export.
-- [ ] Revoke object URLs after safe delay.
+- [x] Revoke object URLs after safe delay.
 - [ ] Add tests for unsupported recorder path.
 - [ ] Add tests for unsupported captureStream path.
 
@@ -478,7 +482,10 @@ Manual pass:
 - [ ] Confirm imported rows preserve source line numbers.
 - [ ] Try oversized JSONL and confirm import is blocked.
 - [ ] Snapshot PNG.
+- [ ] Load media and confirm useful message if `blob:` media is blocked.
+- [ ] Try microphone and confirm useful message if unavailable or denied.
 - [ ] Record short WebM where supported.
+- [ ] Confirm useful message when recording is unsupported.
 - [ ] Panic reset.
 - [ ] Confirm stable renderer survives.
 
@@ -518,6 +525,8 @@ Before calling a build stable:
 - [ ] Oversized JSONL import is blocked.
 - [ ] Imported JSONL rows start quarantined.
 - [ ] Imported JSONL rows preserve source line numbers.
+- [ ] Unsupported media APIs fail with visible status messages.
+- [ ] `blob:` media blocking reports a useful status message.
 - [ ] Unsafe preset names render as text.
 - [ ] Foundry log messages render as text.
 - [ ] No frontend API keys or provider secrets.
@@ -535,19 +544,20 @@ Before calling a build stable:
 2. User-controlled text hardening
 3. JSONL import quarantine
 4. Media capability checks
-5. Test harness
-6. Preset schema implementation
-7. Dataset schema implementation
-8. Memory policy implementation
-9. Audio metrics hardening
-10. Module registry
-11. Recording/export polish
-12. Mock Foundry provider
-13. Provider validation and smoke tests
-14. WebGL adapter
-15. WebGPU adapter
-16. Pyodide adapter
-17. SLM adapter
-18. Cloud provider adapter behind safe boundary
+5. Manual Phase 0 smoke verification
+6. Test harness
+7. Preset schema implementation
+8. Dataset schema implementation
+9. Memory policy implementation
+10. Audio metrics hardening
+11. Module registry
+12. Recording/export polish
+13. Mock Foundry provider
+14. Provider validation and smoke tests
+15. WebGL adapter
+16. WebGPU adapter
+17. Pyodide adapter
+18. SLM adapter
+19. Cloud provider adapter behind safe boundary
 
 Do not skip straight to provider-backed generation. The renderer needs a strong chassis before the strange engine goes back in.
