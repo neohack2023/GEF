@@ -2,6 +2,10 @@
 
 Project planning and architecture notes for GEF Sandbox Compiler v2.3.
 
+## Current status
+
+- [Current Status](./CURRENT_STATUS.md) — quick handoff note for what has been verified, what Phase 1 hardening is complete, current limitations, and the next recommended build step.
+
 ## Build plans
 
 - [SLM Option Plan](./SLM_OPTION_PLAN.md) — plan for adding browser-local and localhost small language model providers as alternatives to cloud LLM workflows.
