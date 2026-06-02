@@ -15,7 +15,4 @@ Project planning and architecture notes for GEF Sandbox Compiler v2.3.
 - [Preset Format](./PRESET_FORMAT.md) — local preset JSON shape, schema versioning, migration, import/export rules, and compatibility policy.
 - [Dataset Format](./DATASET_FORMAT.md) — JSONL row shape, schema validation, migration, splits, cleaning, training derivations, and dataset-card rules.
 - [Memory Policy](./MEMORY_POLICY.md) — retention, distillation, forgetting, privacy controls, memory scoring, retrieval rules, and dataset promotion policy.
-
-## Planned docs
-
-- `TESTING.md` — browser smoke tests and adapter validation checklist.
+- [Testing](./TESTING.md) — browser smoke tests, media/audio checks, storage/import tests, security regressions, adapter validation, and release checklist.
