@@ -1,6 +1,6 @@
 # GEF Current Status
 
-Last updated after adding repo-side project check scripts.
+Last updated after adding safe provider settings for local SLM and LLM proxy access.
 
 This file is the quick handoff note for where the repo currently stands. Deeper design rules live in the specific docs; this page is the dashboard sticky note.
 
@@ -29,6 +29,7 @@ Observed so far:
 - Full local laptop smoke testing is still pending.
 - Playwright or other automated browser tests are not implemented yet.
 - Repo-side scripts now exist for local static serving, syntax checks, and a small security scan, but they still need to be run in a local checkout.
+- Foundry now has a provider settings panel for local SLM endpoints and user-controlled LLM proxy endpoints, but no provider execution adapter is live yet.
 
 Current assumption:
 
@@ -190,6 +191,43 @@ Important limitation:
 These scripts are present in the repo, but they have not yet been run and verified in the user's local checkout.
 ```
 
+### Safe provider settings added
+
+Commits:
+
+```text
+dd4f7e0ca00911598536c27a72493f4e997efe5b - Add safe provider settings UI logic
+362a709e85ac7a9166a9027a332bb1f0f911228e - Add safe provider settings panel
+c2cad31d1eba3b7cdada298d834bb1d1c221a624 - Polish provider settings status handling
+51f7bb1195d3077b00a3fe99e65740ec28183aa2 - Avoid secret wording in provider panel
+```
+
+What changed:
+
+- Added `src/foundry/providerSettings.js`.
+- Added a Foundry Provider Access panel.
+- Provider modes now include:
+  - disabled
+  - local SLM endpoint
+  - LLM proxy endpoint
+- The UI stores endpoint, model name, and credential reference only.
+- Raw provider credentials are not requested or stored in the frontend.
+- Local SLM mode validates that the endpoint points to `localhost`, `127.0.0.1`, or `[::1]`.
+- LLM proxy mode expects a user-controlled backend/proxy to own provider credentials.
+- The UI can copy a provider proxy contract that describes the expected request/response boundary.
+
+Important limitation:
+
+```text
+This is a configuration and contract layer only. GEF still does not call provider endpoints or execute provider output.
+```
+
+Safety rule:
+
+```text
+Provider output is untrusted text until validated.
+```
+
 ---
 
 ## Current implementation limits
@@ -218,6 +256,8 @@ Prompt -> provider suggestion -> schema validation -> sandbox preview -> user pr
 Foundry remains a safe stub.
 
 It can generate seed ideas and queue safe notes, but it should not be treated as a live provider system yet.
+
+Provider settings now exist, but no provider execution adapter is live.
 
 No frontend provider keys should be added.
 
@@ -269,6 +309,21 @@ Still pending:
 - media unsupported-path tests
 - GitHub Actions workflow
 
+### Provider access
+
+Provider settings exist, but the provider adapter boundary is not implemented yet.
+
+Still pending:
+
+- provider request schema in code
+- provider response schema in code
+- timeout and abort handling
+- proxy/local endpoint health check
+- response validation before sandbox preview
+- diagnostics and failure fallback
+- prompt injection regression tests
+- explicit user promotion requirement after provider suggestions
+
 ---
 
 ## Next recommended build step
@@ -276,7 +331,7 @@ Still pending:
 Next target:
 
 ```text
-Run local checks, finish Phase 0 manual smoke checks, then add Playwright.
+Run local checks, finish Phase 0 manual smoke checks, then add provider schema validation or Playwright.
 ```
 
 Build goals:
@@ -289,12 +344,14 @@ Build goals:
 - Confirm preset save/load/delete behavior.
 - Confirm JSONL export/import behavior after quarantine changes.
 - Confirm media upload/mic/recording behavior on the laptop browser that showed CSP symptoms.
+- Confirm provider settings save/load in Foundry.
 - Add repeatable Playwright smoke tests after manual checks stabilize.
+- Add provider request/response schema validation before any provider call path is introduced.
 
 Why this is next:
 
 ```text
-The project now has a starter check loop. The app needs local execution results and browser smoke tests before bigger architecture work.
+The project now has a starter check loop and a provider settings shell. It needs local execution results, browser smoke tests, and provider schema validation before any provider call path exists.
 ```
 
 ---
@@ -331,6 +388,13 @@ Test checklist:
 - Save/load/delete preset works.
 - Unsafe preset name displays as text.
 - Foundry logs display as text.
+- Provider Access panel appears in Foundry.
+- Provider mode can switch between disabled, local SLM, and LLM proxy.
+- Provider settings reject invalid URLs.
+- Local SLM mode rejects non-local endpoints.
+- Provider settings save/load endpoint, model, and credential reference.
+- Provider settings do not ask for raw provider credentials.
+- Copy Proxy Contract works where clipboard permissions allow it.
 - Valid JSONL imports as quarantined rows.
 - Invalid JSONL reports line errors.
 - Mixed JSONL imports valid rows as quarantined and reports bad lines.
@@ -349,5 +413,5 @@ Test checklist:
 Use this if resuming later:
 
 ```text
-Continue GEF from CURRENT_STATUS.md. Phase 1 hardening now includes preset/Foundry log text rendering, safer JSONL import parsing, import quarantine metadata with line-number provenance, and media capability/CSP warning checks. Repo-side starter scripts now include npm run dev, npm run check:syntax, and npm run check:security, but local execution still needs verification. Next: run local checks and Phase 0 manual smoke tests, then add Playwright. Do not implement LLM/SLM provider generation yet. Keep changes small and verify against live GitHub before committing.
+Continue GEF from CURRENT_STATUS.md. Phase 1 hardening now includes preset/Foundry log text rendering, safer JSONL import parsing, import quarantine metadata with line-number provenance, and media capability/CSP warning checks. Repo-side starter scripts include npm run dev, npm run check:syntax, and npm run check:security. Foundry now has safe provider settings for local SLM and LLM proxy endpoints, but no provider execution adapter is live. Next: run local checks and Phase 0 manual smoke tests, then add provider request/response schema validation or Playwright. Do not implement provider execution without validator/sandbox boundaries. Keep changes small and verify against live GitHub before committing.
 ```
