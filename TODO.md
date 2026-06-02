@@ -29,6 +29,7 @@ Observed so far:
 - [x] Imported JSONL rows now start quarantined with `_gefImport` metadata and original source line numbers.
 - [x] Media paths now feature-detect optional browser APIs and report browser/CSP-style failures visibly.
 - [x] Basic project check scripts now exist for local serving, syntax checks, and security scanning.
+- [x] Foundry now has safe provider settings for disabled, local SLM, and LLM proxy modes.
 - [ ] Full local laptop smoke test is still pending.
 - [ ] Laptop Edge showed browser/CSP-style blocking around `blob:` media and a stale/optional Pyodide source-map request.
 - [ ] Need confirm whether laptop issue is cache, Edge policy, CSP, extension, or local browser configuration.
@@ -398,6 +399,7 @@ No LLM/SLM provider adapter is implemented yet. Evolve/iterate actions currently
 Target files:
 
 ```text
+src/foundry/providerSettings.js
 src/foundry/foundryProvider.js
 src/foundry/foundryQueue.js
 src/foundry/foundryValidator.js
@@ -407,6 +409,10 @@ src/foundry/foundrySchemas.js
 
 Tasks:
 
+- [x] Add safe provider settings UI for disabled, local SLM, and LLM proxy modes.
+- [x] Store endpoint, model name, and credential reference only.
+- [x] Validate local SLM mode against local endpoints only.
+- [x] Add copyable proxy contract for external provider wiring.
 - [ ] Define provider request schema.
 - [ ] Define provider response schema.
 - [ ] Add mock provider first.
@@ -418,7 +424,7 @@ Tasks:
 - [ ] Add provider failure fallback.
 - [ ] Add prompt injection regression tests.
 - [ ] Add explicit user promotion requirement.
-- [ ] Keep provider secrets out of frontend code.
+- [ ] Keep provider credentials out of frontend code.
 
 Safety rule:
 
@@ -489,6 +495,9 @@ Manual pass:
 - [ ] Try microphone and confirm useful message if unavailable or denied.
 - [ ] Record short WebM where supported.
 - [ ] Confirm useful message when recording is unsupported.
+- [ ] Confirm Provider Access panel appears in Foundry.
+- [ ] Confirm provider settings save/load endpoint, model, and credential reference.
+- [ ] Confirm provider settings do not ask for raw provider credentials.
 - [ ] Panic reset.
 - [ ] Confirm stable renderer survives.
 
@@ -530,9 +539,10 @@ Before calling a build stable:
 - [ ] Imported JSONL rows preserve source line numbers.
 - [ ] Unsupported media APIs fail with visible status messages.
 - [ ] `blob:` media blocking reports a useful status message.
+- [ ] Provider settings do not store raw provider credentials.
 - [ ] Unsafe preset names render as text.
 - [ ] Foundry log messages render as text.
-- [ ] No frontend API keys or provider secrets.
+- [ ] No frontend API keys or provider credentials.
 - [ ] No active generated-code execution path.
 - [ ] Security scan reviewed.
 - [ ] Playwright boot test passes in Chromium.
@@ -549,19 +559,20 @@ Before calling a build stable:
 4. Media capability checks
 5. Manual Phase 0 smoke verification
 6. Project check scripts
-7. Test harness
-8. Preset schema implementation
-9. Dataset schema implementation
-10. Memory policy implementation
-11. Audio metrics hardening
-12. Module registry
-13. Recording/export polish
-14. Mock Foundry provider
-15. Provider validation and smoke tests
-16. WebGL adapter
-17. WebGPU adapter
-18. Pyodide adapter
-19. SLM adapter
-20. Cloud provider adapter behind safe boundary
+7. Provider settings shell
+8. Test harness
+9. Preset schema implementation
+10. Dataset schema implementation
+11. Memory policy implementation
+12. Audio metrics hardening
+13. Module registry
+14. Recording/export polish
+15. Mock Foundry provider
+16. Provider validation and smoke tests
+17. WebGL adapter
+18. WebGPU adapter
+19. Pyodide adapter
+20. SLM adapter
+21. Cloud provider adapter behind safe boundary
 
 Do not skip straight to provider-backed generation. The renderer needs a strong chassis before the strange engine goes back in.
