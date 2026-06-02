@@ -20,6 +20,13 @@ import {
 
 const $ = (id) => document.getElementById(id);
 
+const JSONL_IMPORT_LIMITS = {
+  maxFileBytes: 2 * 1024 * 1024,
+  maxRows: 5000,
+  maxLineChars: 10000,
+  maxReportedErrors: 5
+};
+
 const sessionId = crypto.randomUUID ? crypto.randomUUID() : `gef-${Date.now()}`;
 const audio = new AudioAnalyzer();
 const runtime = new CanvasRuntime({
@@ -155,6 +162,58 @@ function makeEmptyState(text, className = '') {
   row.style.fontSize = '.8rem';
   row.textContent = text;
   return row;
+}
+
+function parseTelemetryJsonl(text, limits = JSONL_IMPORT_LIMITS) {
+  const rows = [];
+  const errors = [];
+  const lines = String(text).split(/\r?\n/);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const lineNumber = index + 1;
+    const rawLine = lines[index];
+    const line = rawLine.trim();
+
+    if (!line) continue;
+
+    if (rows.length >= limits.maxRows) {
+      errors.push({ line: lineNumber, message: `Row limit reached (${limits.maxRows}).` });
+      break;
+    }
+
+    if (line.length > limits.maxLineChars) {
+      errors.push({ line: lineNumber, message: `Line exceeds ${limits.maxLineChars} characters.` });
+      continue;
+    }
+
+    try {
+      const row = JSON.parse(line);
+      if (!row || typeof row !== 'object' || Array.isArray(row)) {
+        errors.push({ line: lineNumber, message: 'Line must be a JSON object.' });
+        continue;
+      }
+      rows.push(row);
+    } catch (error) {
+      errors.push({ line: lineNumber, message: error.message || 'Invalid JSON.' });
+    }
+  }
+
+  return { rows, errors };
+}
+
+function summarizeJsonlImport(rows, errors, totalRows) {
+  if (rows.length && errors.length) {
+    const firstErrors = errors
+      .slice(0, JSONL_IMPORT_LIMITS.maxReportedErrors)
+      .map((error) => `line ${error.line}: ${error.message}`)
+      .join('; ');
+    const more = errors.length > JSONL_IMPORT_LIMITS.maxReportedErrors ? `; +${errors.length - JSONL_IMPORT_LIMITS.maxReportedErrors} more` : '';
+    return `Imported ${rows.length} rows, rejected ${errors.length}. ${firstErrors}${more}`;
+  }
+
+  if (rows.length) return `Imported ${rows.length} telemetry rows. Total: ${totalRows}.`;
+  if (errors.length) return `Import rejected ${errors.length} lines. First error line ${errors[0].line}: ${errors[0].message}`;
+  return 'No JSONL rows found.';
 }
 
 function renderLocalPresets() {
@@ -451,19 +510,29 @@ function bindUi() {
   $('dataset-upload').addEventListener('change', (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    if (file.size > JSONL_IMPORT_LIMITS.maxFileBytes) {
+      setStatus(`Import blocked: file exceeds ${Math.round(JSONL_IMPORT_LIMITS.maxFileBytes / 1024 / 1024)} MB.`, false, 3000);
+      event.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (ev) => {
-      try {
-        const rows = String(ev.target.result)
-          .split('\n')
-          .filter(Boolean)
-          .map((line) => JSON.parse(line));
+      const { rows, errors } = parseTelemetryJsonl(ev.target.result);
+
+      if (rows.length) {
         const all = importTelemetryRows(rows);
         $('dataset-count').innerText = all.length;
-        setStatus(`Imported ${rows.length} telemetry rows.`, false, 1600);
-      } catch {
-        setStatus('Import failed.', false, 2500);
+        setStatus(summarizeJsonlImport(rows, errors, all.length), false, errors.length ? 5000 : 1800);
+      } else {
+        setStatus(summarizeJsonlImport(rows, errors, getTelemetry().length), false, 5000);
       }
+
+      event.target.value = '';
+    };
+    reader.onerror = () => {
+      setStatus('Import failed: could not read file.', false, 3000);
       event.target.value = '';
     };
     reader.readAsText(file);
