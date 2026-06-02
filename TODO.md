@@ -14,14 +14,23 @@ Do not skip the chassis work. The weird engine goes back in only after the wirin
 
 ## Current verification status
 
-Testing has not been run yet.
+Testing is partially started, but no automated test harness exists yet.
 
-The docs spine and safe foundation are in place, but runtime behavior is still unverified until Phase 0 and Phase 2 checks are completed.
+Observed so far:
+
+- [x] Hosted static deployment loads and runs on mobile from `https://gtterminal.neocities.org/systems/Gef/Index`.
+- [x] The app is not globally broken on the hosted webserver path.
+- [ ] Full local laptop smoke test is still pending.
+- [ ] Laptop Edge showed browser/CSP-style blocking around `blob:` media and a stale/optional Pyodide source-map request.
+- [ ] Need confirm whether laptop issue is cache, Edge policy, CSP, extension, or local browser configuration.
+- [ ] True LLM/SLM-driven visual evolution is not implemented yet. Current evolve/iterate behavior is curated sandbox preview, not provider-backed generation.
+
+The docs spine and safe foundation are in place, but runtime behavior remains only partially verified until Phase 0 and Phase 2 checks are completed.
 
 Current assumption:
 
 ```text
-Proceed carefully from an untested foundation.
+Proceed carefully from a partially smoke-tested foundation.
 ```
 
 This means new work can continue, but every code change should favor small commits, clear failure states, and easy rollback until the browser smoke tests and manual QA pass.
@@ -80,6 +89,7 @@ Goal: prove the current static browser app boots and survives basic interaction 
 
 Tasks:
 
+- [x] Confirm hosted static deployment can run on at least one mobile browser.
 - [ ] Run from a local server, not `file://`.
 - [ ] Confirm `src/app.js` loads as an ES module.
 - [ ] Confirm default `voidCore` render appears.
@@ -92,6 +102,8 @@ Tasks:
 - [ ] Confirm telemetry export downloads JSONL.
 - [ ] Confirm invalid JSONL import fails safely.
 - [ ] Confirm app reload does not break saved local state.
+- [ ] Re-test laptop Edge after clearing cache/site data.
+- [ ] Confirm CSP allows required media behavior or app fails visibly when `blob:` media is blocked.
 
 Command:
 
@@ -103,6 +115,12 @@ Open:
 
 ```text
 http://localhost:8080
+```
+
+Known browser note:
+
+```text
+Laptop Edge may block blob media under a restrictive CSP or stale deployed build. Mobile hosted path works, so treat this as browser/deployment-specific until reproduced elsewhere.
 ```
 
 ---
@@ -125,6 +143,7 @@ Tasks:
 - [ ] Add safer object URL cleanup for media upload and downloads.
 - [ ] Add visible warning when recording is unsupported.
 - [ ] Add visible warning when microphone is unavailable or denied.
+- [ ] Add visible warning when media `blob:` URLs are blocked by browser/CSP policy.
 
 Regression tests to add later:
 
@@ -133,6 +152,7 @@ unsafe preset name does not execute
 invalid JSONL does not poison local storage
 sandbox panic always returns to stable renderer
 unsupported media APIs fail with a visible status message
+blob media blocked by CSP reports a useful status message
 ```
 
 ---
@@ -342,6 +362,12 @@ Media export should fail loudly, not mysteriously.
 
 Goal: restore the Autopilot idea as reviewed provider suggestions, not direct runtime authority.
 
+Current limitation:
+
+```text
+No LLM/SLM provider adapter is implemented yet. Evolve/iterate actions currently stage curated modules in sandbox and should not be expected to synthesize new visuals from a model.
+```
+
 Target files:
 
 ```text
@@ -419,6 +445,7 @@ Manual pass:
 - [ ] Toggle sandbox.
 - [ ] Run evolve preview.
 - [ ] Run iterate preview.
+- [ ] Confirm evolve/iterate currently use curated sandbox modules, not LLM/SLM generation.
 - [ ] Like one preview.
 - [ ] Reject one preview with reason.
 - [ ] Save a preset.
@@ -438,9 +465,12 @@ browser
 OS
 viewport
 audio source
+hosted/local URL
 what looked good
 what felt wrong
 whether audio reaction matched expectation
+browser-specific issues
+CSP/media/blob errors
 bugs or console errors
 ```
 
@@ -454,6 +484,8 @@ Before calling a build stable:
 - [ ] Static syntax checks pass.
 - [ ] App boots from local server.
 - [ ] Stable renderer works with no audio.
+- [ ] Hosted mobile smoke path works.
+- [ ] Known browser-specific issues are documented.
 - [ ] Sandbox panic works.
 - [ ] Preset save/load works.
 - [ ] JSONL export works.
