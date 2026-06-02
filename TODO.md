@@ -14,7 +14,7 @@ Do not skip the chassis work. The weird engine goes back in only after the wirin
 
 ## Current verification status
 
-Testing is partially started, but no automated test harness exists yet.
+Testing is partially started, but no automated browser test harness exists yet.
 
 Observed so far:
 
@@ -28,12 +28,13 @@ Observed so far:
 - [x] JSONL import now has file size, row count, line length, line-by-line parsing, and partial failure reporting.
 - [x] Imported JSONL rows now start quarantined with `_gefImport` metadata and original source line numbers.
 - [x] Media paths now feature-detect optional browser APIs and report browser/CSP-style failures visibly.
+- [x] Basic project check scripts now exist for local serving, syntax checks, and security scanning.
 - [ ] Full local laptop smoke test is still pending.
 - [ ] Laptop Edge showed browser/CSP-style blocking around `blob:` media and a stale/optional Pyodide source-map request.
 - [ ] Need confirm whether laptop issue is cache, Edge policy, CSP, extension, or local browser configuration.
 - [ ] True LLM/SLM-driven visual evolution is not implemented yet. Current evolve/iterate behavior is curated sandbox preview, not provider-backed generation.
 
-The docs spine and safe foundation are in place, but runtime behavior remains only partially verified until Phase 0 and Phase 2 checks are completed.
+The docs spine and safe foundation are in place, but runtime behavior remains only partially verified until Phase 0 and browser smoke checks are completed.
 
 Current assumption:
 
@@ -113,13 +114,14 @@ Tasks:
 - [ ] Re-test laptop Edge after clearing cache/site data.
 - [ ] Confirm CSP allows required media behavior or app fails visibly when `blob:` media is blocked.
 
-Command:
+Commands:
 
 ```bash
-python -m http.server 8080
+npm run dev
+npm run check
 ```
 
-Open:
+Open after `npm run dev`:
 
 ```text
 http://localhost:8080
@@ -187,8 +189,8 @@ Goal: give the project a repeatable test loop.
 
 Tasks:
 
-- [ ] Add `package.json`.
-- [ ] Add Vite or a simple static dev server script.
+- [x] Add `package.json`.
+- [x] Add Vite or a simple static dev server script.
 - [ ] Add ESLint.
 - [ ] Add Prettier.
 - [ ] Add Playwright.
@@ -198,10 +200,24 @@ Tasks:
 - [ ] Add preset save/load test.
 - [ ] Add JSONL import/export test.
 - [ ] Add media unsupported-path tests.
-- [ ] Add security grep script for `eval`, `new Function`, `apiKey`, `secret`, and `token`.
+- [x] Add security grep script for `eval`, `new Function`, `apiKey`, `secret`, and `token`.
 - [ ] Add GitHub Actions workflow for tests.
 
-Suggested layout:
+Current scripts:
+
+```json
+{
+  "scripts": {
+    "dev": "python -m http.server 8080",
+    "check": "npm run check:syntax && npm run check:security",
+    "check:syntax": "node --check src/app.js && node --check src/audio/analyzer.js && node --check src/render/canvasRuntime.js && node --check src/render/visualModules.js && node --check src/storage/localLibrary.js && node --check src/autopilot/autopilotStub.js",
+    "check:security": "node tools/security-scan.mjs",
+    "smoke:manual": "echo Open http://localhost:8080 after npm run dev and follow docs/CURRENT_STATUS.md"
+  }
+}
+```
+
+Suggested future layout:
 
 ```text
 tests/
@@ -209,19 +225,6 @@ tests/
   e2e/
   fixtures/
   helpers/
-```
-
-First useful scripts:
-
-```json
-{
-  "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "test:e2e": "playwright test",
-    "check:syntax": "node --check src/app.js && node --check src/audio/analyzer.js && node --check src/render/canvasRuntime.js && node --check src/storage/localLibrary.js",
-    "check:security": "grep -R \"new Function\\|eval(\\|apiKey\\|secret\\|token\" src index.html || true"
-  }
-}
 ```
 
 ---
@@ -531,7 +534,7 @@ Before calling a build stable:
 - [ ] Foundry log messages render as text.
 - [ ] No frontend API keys or provider secrets.
 - [ ] No active generated-code execution path.
-- [ ] Security grep reviewed.
+- [ ] Security scan reviewed.
 - [ ] Playwright boot test passes in Chromium.
 - [ ] Firefox/WebKit smoke results are documented.
 - [ ] Manual creative QA completed.
@@ -545,19 +548,20 @@ Before calling a build stable:
 3. JSONL import quarantine
 4. Media capability checks
 5. Manual Phase 0 smoke verification
-6. Test harness
-7. Preset schema implementation
-8. Dataset schema implementation
-9. Memory policy implementation
-10. Audio metrics hardening
-11. Module registry
-12. Recording/export polish
-13. Mock Foundry provider
-14. Provider validation and smoke tests
-15. WebGL adapter
-16. WebGPU adapter
-17. Pyodide adapter
-18. SLM adapter
-19. Cloud provider adapter behind safe boundary
+6. Project check scripts
+7. Test harness
+8. Preset schema implementation
+9. Dataset schema implementation
+10. Memory policy implementation
+11. Audio metrics hardening
+12. Module registry
+13. Recording/export polish
+14. Mock Foundry provider
+15. Provider validation and smoke tests
+16. WebGL adapter
+17. WebGPU adapter
+18. Pyodide adapter
+19. SLM adapter
+20. Cloud provider adapter behind safe boundary
 
 Do not skip straight to provider-backed generation. The renderer needs a strong chassis before the strange engine goes back in.
