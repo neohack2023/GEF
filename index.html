@@ -104,7 +104,28 @@
   </div>
 </div>
 
-<div id="code-layer" class="hidden"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px;border-bottom:1px solid rgba(255,255,255,.1);"><h3 id="code-title" style="margin:0;color:#00b8ff;font-size:1rem;">Source Architecture</h3><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;"><select id="code-format" style="width:auto;margin:0;padding:5px 7px;"><option value="wgsl">WGSL</option><option value="glsl">GLSL</option><option value="js" selected>JS Canvas</option><option value="python">Python</option></select><button id="apply-code-btn" class="btn-small btn-ai">Preview to Sandbox</button><button id="apply-main-base-btn" class="btn-small btn-good">Refresh Main Base</button><button id="close-code-btn" class="btn-small">X</button></div></div><textarea id="code-viewer" spellcheck="false" placeholder="// Adapter preview notes..."></textarea></div>
+<div id="code-layer" class="hidden">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px;border-bottom:1px solid rgba(255,255,255,.1);">
+    <h3 id="code-title" style="margin:0;color:#00b8ff;font-size:1rem;">Source Architecture</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+      <select id="code-format" style="width:auto;margin:0;padding:5px 7px;">
+        <option value="wgsl">WGSL</option>
+        <option value="glsl">GLSL</option>
+        <option value="js" selected>JS Canvas</option>
+        <option value="python">Python</option>
+      </select>
+      <button id="manual-paste-btn" class="btn-small">Paste</button>
+      <button id="manual-clear-btn" class="btn-small">Clear</button>
+      <button id="manual-check-btn" class="btn-small" style="background:rgba(247,183,51,.16);color:#f7b733;border-color:rgba(247,183,51,.38);">Check</button>
+      <button id="manual-copy-llm-btn" class="btn-small" style="background:rgba(168,85,247,.16);color:#d2a8ff;border-color:rgba(168,85,247,.38);">Copy LLM Prompt</button>
+      <button id="apply-code-btn" class="btn-small btn-ai">Preview to Sandbox</button>
+      <button id="apply-main-base-btn" class="btn-small btn-good">Refresh Main Base</button>
+      <button id="close-code-btn" class="btn-small">X</button>
+    </div>
+  </div>
+  <textarea id="code-viewer" spellcheck="false" placeholder="// Adapter preview notes..."></textarea>
+  <div id="manual-compiler-output" style="margin:0 15px 15px 15px;padding:10px;min-height:64px;max-height:180px;overflow:auto;background:rgba(0,0,0,.46);border:1px solid rgba(0,184,255,.18);border-radius:10px;color:#a0a0a0;font-size:.72rem;white-space:pre-wrap;line-height:1.45;">Manual helper ready. Paste code or notes, run Check, then copy a repair prompt for an external LLM if needed.</div>
+</div>
 
 <div id="status-bar">Engines Waking Up...</div>
 <canvas id="gpu-canvas" style="display:none;"></canvas>
@@ -115,5 +136,6 @@
 <canvas id="composite-canvas"></canvas>
 <audio id="media-player" crossorigin="anonymous" style="display:none;"></audio>
 <script type="module" src="./src/app.js"></script>
+<script type="module" src="./src/compiler/manualCompilerAssist.js"></script>
 </body>
 </html>
