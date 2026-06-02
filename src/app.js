@@ -147,30 +147,65 @@ function renderCodeViewer(format = 'js') {
   $('code-viewer').value = samples[format] || samples.js;
 }
 
+function makeEmptyState(text, className = '') {
+  const row = document.createElement('div');
+  row.className = className;
+  row.style.textAlign = 'center';
+  row.style.color = '#666';
+  row.style.fontSize = '.8rem';
+  row.textContent = text;
+  return row;
+}
+
 function renderLocalPresets() {
   const listEl = $('local-list');
   const presets = getPresets();
+  listEl.replaceChildren();
 
   if (!presets.length) {
-    listEl.innerHTML = `<div style="text-align:center;color:#666;font-size:.8rem;">No local saves yet.</div>`;
+    listEl.appendChild(makeEmptyState('No local saves yet.'));
     return;
   }
 
-  listEl.innerHTML = '';
   presets.forEach((preset, index) => {
     const card = document.createElement('div');
     card.className = 'community-card';
-    card.innerHTML = `
-      <div class="cc-title">${preset.name}</div>
-      <div class="cc-author">${preset.baseModuleId || 'voidCore'} base · ${preset.enabledModules?.length || 0} overlays</div>
-      <div class="tiny-note" style="margin:6px 0 8px 0;">Speed ${preset.ui?.speed ?? 1.0} · Glitch ${preset.ui?.glitch ?? 1.5} · Sense ${preset.ui?.audioSense ?? 1.0}</div>
-      <div class="flex-row" style="margin-bottom:0;">
-        <button class="btn-small btn-good load-btn" style="color:#000;background:#00ff88;">Load</button>
-        <button class="btn-small delete-btn" style="color:#ff416c;border-color:rgba(255,65,108,.35);">Delete</button>
-      </div>
-    `;
 
-    card.querySelector('.load-btn').addEventListener('click', () => {
+    const title = document.createElement('div');
+    title.className = 'cc-title';
+    title.textContent = preset.name || 'Unnamed Pipeline';
+
+    const author = document.createElement('div');
+    author.className = 'cc-author';
+    const baseModule = preset.baseModuleId || 'voidCore';
+    const overlayCount = Array.isArray(preset.enabledModules) ? preset.enabledModules.length : 0;
+    author.textContent = `${baseModule} base · ${overlayCount} overlays`;
+
+    const note = document.createElement('div');
+    note.className = 'tiny-note';
+    note.style.margin = '6px 0 8px 0';
+    note.textContent = `Speed ${preset.ui?.speed ?? 1.0} · Glitch ${preset.ui?.glitch ?? 1.5} · Sense ${preset.ui?.audioSense ?? 1.0}`;
+
+    const controls = document.createElement('div');
+    controls.className = 'flex-row';
+    controls.style.marginBottom = '0';
+
+    const loadBtn = document.createElement('button');
+    loadBtn.className = 'btn-small btn-good';
+    loadBtn.style.color = '#000';
+    loadBtn.style.background = '#00ff88';
+    loadBtn.textContent = 'Load';
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn-small';
+    deleteBtn.style.color = '#ff416c';
+    deleteBtn.style.borderColor = 'rgba(255,65,108,.35)';
+    deleteBtn.textContent = 'Delete';
+
+    controls.append(loadBtn, deleteBtn);
+    card.append(title, author, note, controls);
+
+    loadBtn.addEventListener('click', () => {
       runtime.setBaseModule(preset.baseModuleId || 'voidCore');
       runtime.enabledModules = new Set(preset.enabledModules || ['spectralGrid', 'beatBloom', 'chromaSlice']);
       $('sl-speed').value = preset.ui?.speed ?? 1.0;
@@ -181,10 +216,10 @@ function renderLocalPresets() {
       $('val-audio-sense').textContent = Number($('sl-audio-sense').value).toFixed(1);
       renderModuleStack();
       toggleStudioTab('studio');
-      setStatus(`Loaded preset: ${preset.name}`, false, 1800);
+      setStatus(`Loaded preset: ${preset.name || 'Unnamed Pipeline'}`, false, 1800);
     });
 
-    card.querySelector('.delete-btn').addEventListener('click', () => {
+    deleteBtn.addEventListener('click', () => {
       deletePreset(index);
       renderLocalPresets();
     });
@@ -196,18 +231,35 @@ function renderLocalPresets() {
 function renderAutopilotLog() {
   const el = $('autopilot-log');
   const logs = getAutopilotLogs();
+  el.replaceChildren();
 
   if (!logs.length) {
-    el.innerHTML = `<div style="color:#666;font-size:.72rem;text-align:center;">${safeAutopilotNotice()}</div>`;
+    const notice = makeEmptyState(safeAutopilotNotice());
+    notice.style.fontSize = '.72rem';
+    el.appendChild(notice);
     return;
   }
 
-  el.innerHTML = logs.slice(-50).reverse().map((entry) => `
-    <div style="margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">
-      <div style="font-size:0.65rem;color:#00b8ff;">${new Date(entry.ts).toLocaleTimeString()} · ${entry.type}</div>
-      <div style="font-size:0.72rem;color:#ddd;">${entry.message}</div>
-    </div>
-  `).join('');
+  logs.slice(-50).reverse().forEach((entry) => {
+    const row = document.createElement('div');
+    row.style.marginBottom = '6px';
+    row.style.borderBottom = '1px solid rgba(255,255,255,0.06)';
+    row.style.paddingBottom = '4px';
+
+    const meta = document.createElement('div');
+    meta.style.fontSize = '0.65rem';
+    meta.style.color = '#00b8ff';
+    const timestamp = Number.isFinite(entry?.ts) ? new Date(entry.ts).toLocaleTimeString() : 'unknown time';
+    meta.textContent = `${timestamp} · ${entry?.type || 'LOG'}`;
+
+    const message = document.createElement('div');
+    message.style.fontSize = '0.72rem';
+    message.style.color = '#ddd';
+    message.textContent = entry?.message || '';
+
+    row.append(meta, message);
+    el.appendChild(row);
+  });
 }
 
 function downloadText(filename, text, type = 'text/plain') {
