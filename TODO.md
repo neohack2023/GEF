@@ -20,6 +20,8 @@ Observed so far:
 
 - [x] Hosted static deployment loads and runs on mobile from `https://gtterminal.neocities.org/systems/Gef/Index`.
 - [x] The app is not globally broken on the hosted webserver path.
+- [x] Preset and Foundry log rendering now use DOM nodes and `textContent` for user/log text.
+- [x] JSONL import now has file size, row count, line length, line-by-line parsing, and partial failure reporting.
 - [ ] Full local laptop smoke test is still pending.
 - [ ] Laptop Edge showed browser/CSP-style blocking around `blob:` media and a stale/optional Pyodide source-map request.
 - [ ] Need confirm whether laptop issue is cache, Edge policy, CSP, extension, or local browser configuration.
@@ -131,11 +133,11 @@ Goal: remove the sharpest browser and import risks before building more memory, 
 
 Tasks:
 
-- [ ] Replace user/import-controlled `innerHTML` render paths with DOM construction and `textContent`.
-- [ ] Harden preset card rendering against HTML/script injection.
-- [ ] Harden autopilot log rendering against imported text injection.
-- [ ] Add JSONL import size limits.
-- [ ] Add line-by-line JSONL parsing with partial failure reporting.
+- [x] Replace preset/Foundry user-controlled `innerHTML` render paths with DOM construction and `textContent`.
+- [x] Harden preset card rendering against HTML/script injection.
+- [x] Harden autopilot log rendering against imported text injection.
+- [x] Add JSONL import size limits.
+- [x] Add line-by-line JSONL parsing with partial failure reporting.
 - [ ] Add import quarantine state for telemetry/dataset rows.
 - [ ] Add feature detection for `MediaRecorder`.
 - [ ] Add feature detection for `canvas.captureStream`.
@@ -145,11 +147,20 @@ Tasks:
 - [ ] Add visible warning when microphone is unavailable or denied.
 - [ ] Add visible warning when media `blob:` URLs are blocked by browser/CSP policy.
 
+Recent Phase 1 commits:
+
+```text
+a0e27f2090377e4a1a75c1cc52d309c9e1ce9611 - Harden preset and Foundry log rendering
+56ea53725170ef928b294d3c4ed722c9d9bd4997 - Add safer JSONL import parsing
+```
+
 Regression tests to add later:
 
 ```text
 unsafe preset name does not execute
 invalid JSONL does not poison local storage
+mixed JSONL imports valid rows and reports bad lines
+oversized JSONL file is blocked
 sandbox panic always returns to stable renderer
 unsupported media APIs fail with a visible status message
 blob media blocked by CSP reports a useful status message
@@ -453,6 +464,8 @@ Manual pass:
 - [ ] Export telemetry JSONL.
 - [ ] Import valid JSONL.
 - [ ] Try invalid JSONL.
+- [ ] Import mixed valid/invalid JSONL and confirm valid rows are kept while bad lines are reported.
+- [ ] Try oversized JSONL and confirm import is blocked.
 - [ ] Snapshot PNG.
 - [ ] Record short WebM where supported.
 - [ ] Panic reset.
@@ -490,6 +503,10 @@ Before calling a build stable:
 - [ ] Preset save/load works.
 - [ ] JSONL export works.
 - [ ] Invalid JSONL import fails safely.
+- [ ] Mixed JSONL imports valid rows and reports bad lines.
+- [ ] Oversized JSONL import is blocked.
+- [ ] Unsafe preset names render as text.
+- [ ] Foundry log messages render as text.
 - [ ] No frontend API keys or provider secrets.
 - [ ] No active generated-code execution path.
 - [ ] Security grep reviewed.
