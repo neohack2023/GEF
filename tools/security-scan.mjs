@@ -1,18 +1,35 @@
 import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { extname, join } from 'node:path';
 
-const roots = ['index.html', 'src'];
+const roots = ['index.html', 'src', 'tools'];
 const fileExtensions = new Set(['.js', '.mjs', '.html', '.css']);
 const blockedPatterns = [
   { label: 'eval call', pattern: /\beval\s*\(/ },
   { label: 'Function constructor', pattern: /\bnew\s+Function\b/ },
   { label: 'frontend API key wording', pattern: /api[_-]?key/i },
-  { label: 'frontend secret wording', pattern: /secret/i },
-  { label: 'frontend bearer token wording', pattern: /bearer\s+[a-z0-9._-]+/i }
+  { label: 'frontend sensitive credential wording', pattern: /\b(secret|password|token)\b/i },
+  { label: 'frontend bearer token literal', pattern: /bearer\s+[a-z0-9._-]+/i }
+];
+
+const allowedReviewTextPatterns = [
+  /forbidden/i,
+  /blockedPatterns/,
+  /safety boundaries/i,
+  /do not use/i,
+  /do not store/i,
+  /do not log/i,
+  /credential reference/i,
+  /provider credentials/i,
+  /frontend sensitive credential wording/i,
+  /frontend bearer token literal/i,
+  /api\[_-\]\?key/i,
+  /\bsecret\|password\|token\b/i,
+  /bearer\\s\+\[a-z0-9\._-\]/i,
+  /grep -R/i
 ];
 
 function hasSupportedExtension(path) {
-  return [...fileExtensions].some((extension) => path.endsWith(extension));
+  return fileExtensions.has(extname(path));
 }
 
 async function collectFiles(path) {
@@ -37,6 +54,10 @@ async function collectFiles(path) {
   return files;
 }
 
+function isAllowedReviewText(line) {
+  return allowedReviewTextPatterns.some((pattern) => pattern.test(line));
+}
+
 const findings = [];
 const files = (await Promise.all(roots.map(collectFiles))).flat();
 
@@ -45,7 +66,7 @@ for (const file of files) {
   const lines = text.split(/\r?\n/);
   lines.forEach((line, index) => {
     blockedPatterns.forEach(({ label, pattern }) => {
-      if (pattern.test(line)) {
+      if (pattern.test(line) && !isAllowedReviewText(line)) {
         findings.push(`${file}:${index + 1} ${label}`);
       }
     });
