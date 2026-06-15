@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 defaults:
   run:
@@ -19,6 +18,10 @@ jobs:
   node-ci:
     name: npm run check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.checks.outputs.status }}
 
     steps:
       - name: Checkout repository
@@ -40,13 +43,13 @@ jobs:
           exit 0
 
       - name: Build CI failure packet
-        if: steps.checks.outputs.status != '0'
+        if: steps.checks.outputs.status != '' && steps.checks.outputs.status != '0'
         run: node tools/ci-failure-report.mjs ci-output.log
         env:
           CI_FAILURE_STAGE: npm run check
 
       - name: Upload CI failure packet
-        if: steps.checks.outputs.status != '0'
+        if: steps.checks.outputs.status != '' && steps.checks.outputs.status != '0'
         uses: actions/upload-artifact@v4
         with:
           name: node-ci-failure-${{ github.run_id }}
@@ -57,11 +60,32 @@ jobs:
             ci-failure-summary.md
 
       - name: Add CI failure summary
-        if: steps.checks.outputs.status != '0'
+        if: steps.checks.outputs.status != '' && steps.checks.outputs.status != '0'
         run: cat ci-failure-summary.md >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Fail workflow when checks fail
+        if: steps.checks.outputs.status != '' && steps.checks.outputs.status != '0'
+        run: exit 1
+
+  report-ci-issue:
+    name: Open issue for Node CI failure
+    needs: node-ci
+    if: always() && github.event_name == 'push' && needs.node-ci.outputs.status != '' && needs.node-ci.outputs.status != '0'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      issues: write
+
+    steps:
+      - name: Download CI failure packet
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh run download "$GITHUB_RUN_ID" \
+            --name "node-ci-failure-${GITHUB_RUN_ID}" \
+            --dir .
+
       - name: Open or update CI failure issue
-        if: steps.checks.outputs.status != '0' && github.event_name == 'push'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -83,7 +107,3 @@ jobs:
               --label ci-failure \
               --label automation
           fi
-
-      - name: Fail workflow when checks fail
-        if: steps.checks.outputs.status != '0'
-        run: exit 1
