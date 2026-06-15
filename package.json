@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "python -m http.server 8080",
     "check": "npm run check:syntax && npm run check:security",
-    "check:syntax": "node --check src/app.js && node --check src/audio/analyzer.js && node --check src/render/canvasRuntime.js && node --check src/render/visualModules.js && node --check src/storage/localLibrary.js && node --check src/storage/quarantineReview.js && node --check src/slm/providers/ollamaProvider.js && node --check src/slm/validators/moduleSuggestionValidator.js && node --check src/foundry/promptBuilder.js && node --check src/foundry/localSlmSuggest.js && node --check src/autopilot/autopilotStub.js",
+    "check:syntax": "node --check src/app.js && node --check src/audio/analyzer.js && node --check src/render/canvasRuntime.js && node --check src/render/visualModules.js && node --check src/storage/localLibrary.js && node --check src/storage/quarantineReview.js && node --check src/slm/slmLanes.js && node --check src/slm/providers/ollamaProvider.js && node --check src/slm/validators/moduleSuggestionValidator.js && node --check src/slm/validators/generatedVisualCodePolicy.js && node --check src/foundry/promptBuilder.js && node --check src/foundry/localSlmSuggest.js && node --check src/autopilot/autopilotStub.js",
     "check:security": "node tools/security-scan.mjs",
     "smoke:manual": "echo Open http://localhost:8080 after npm run dev and follow docs/CURRENT_STATUS.md"
   },
