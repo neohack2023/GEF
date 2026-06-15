@@ -45,6 +45,8 @@ The current browser prototype includes:
 - imported telemetry quarantine review before reviewed export
 - safe Foundry/Autopilot stubs
 - local Ollama SLM suggestions for curated modules
+- split local SLM lane profiles for light helper and code foundry tasks
+- static policy screening for generated visual code artifacts
 - snapshot and WebM capture paths
 - documentation for architecture, safety, memory, datasets, presets, and testing
 
@@ -62,7 +64,8 @@ Key documents:
 - [`PRESET_FORMAT.md`](./docs/PRESET_FORMAT.md) — local preset shape, versioning, migration, and compatibility rules.
 - [`DATASET_FORMAT.md`](./docs/DATASET_FORMAT.md) — telemetry rows, JSONL format, dataset promotion, and cleaning rules.
 - [`QUARANTINE_REVIEW.md`](./docs/QUARANTINE_REVIEW.md) — local review gate for imported JSONL rows before reviewed export.
-- [`LOCAL_OLLAMA_SLM.md`](./docs/LOCAL_OLLAMA_SLM.md) — first local Ollama SLM lane for validated curated-module suggestions.
+- [`LOCAL_OLLAMA_SLM.md`](./docs/LOCAL_OLLAMA_SLM.md) — local Ollama SLM lanes for curated-module suggestions and model setup.
+- [`CODE_FOUNDRY_SLM.md`](./docs/CODE_FOUNDRY_SLM.md) — code-focused local SLM lane for generating, linting, repairing, and retrying candidate visual code artifacts under validator control.
 - [`MEMORY_POLICY.md`](./docs/MEMORY_POLICY.md) — retention, distillation, forgetting, scoring, and privacy controls.
 - [`TESTING.md`](./docs/TESTING.md) — smoke tests, media checks, security regressions, adapter tests, and release checklist.
 - [`SLM_OPTION_PLAN.md`](./docs/SLM_OPTION_PLAN.md) — plan for browser-local and localhost model providers.
