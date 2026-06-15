@@ -13,6 +13,10 @@ Project planning and architecture notes for GEF Sandbox Compiler v2.3.
 - ✅ [Code Foundry SLM Lane](./CODE_FOUNDRY_SLM.md) — code-focused local SLM lane for generating, linting, repairing, and retrying candidate visual code artifacts under validator and sandbox control.
 - [Feedback and Memory System Plan](./FEEDBACK_MEMORY_SYSTEM.md) — plan for turning user feedback, validation results, telemetry, and local memory into reusable datasets for LLM/SLM improvement.
 
+## Product signals
+
+- [External Feedback Notes](./EXTERNAL_FEEDBACK.md) — early outside feedback on shader tooling, DJ-screen use cases, live visual requirements, and safe positioning before public release.
+
 ## Core docs
 
 - [Architecture](./ARCHITECTURE.md) — render lanes, module registry, sandbox flow, provider boundaries, and future runtime layout.
