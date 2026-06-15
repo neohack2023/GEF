@@ -101,7 +101,7 @@
         <option value="llm-proxy">Provider: LLM Proxy Endpoint</option>
       </select>
       <input id="provider-endpoint" type="url" placeholder="Endpoint URL, for example http://localhost:11434/api/generate" />
-      <input id="provider-model" type="text" placeholder="Model name, for example local-code-helper" />
+      <input id="provider-model" type="text" placeholder="Model name, for example llama3.2:3b" />
       <input id="provider-credential-ref" type="text" placeholder="Credential reference name, not the credential value" />
       <div class="flex-row" style="margin-top:8px;"><button id="provider-save-btn" class="btn-small btn-good" style="color:#000;background:#00ff88;">Save Provider Settings</button><button id="provider-copy-contract-btn" class="btn-small" style="background:rgba(168,85,247,.16);color:#d2a8ff;border-color:rgba(168,85,247,.38);">Copy Proxy Contract</button></div>
       <div id="provider-settings-status" class="tiny-note" style="margin-top:8px;">Provider disabled. Foundry still uses curated local sandbox notes.</div>
@@ -161,6 +161,7 @@
 <script type="module" src="./src/app.js"></script>
 <script type="module" src="./src/compiler/manualCompilerAssist.js"></script>
 <script type="module" src="./src/foundry/providerSettings.js"></script>
+<script type="module" src="./src/foundry/localSlmSuggest.js"></script>
 <script type="module" src="./src/storage/quarantineReview.js"></script>
 </body>
 </html>
