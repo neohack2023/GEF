@@ -116,7 +116,14 @@
     <div class="flex-row"><input id="preset-name" type="text" placeholder="Name your pipeline..." style="margin:0;"><button id="save-btn" class="btn-small btn-good" style="color:#000;background:#00ff88;">Save Local</button></div>
     <div class="section-title">Local Library</div>
     <div id="local-list" style="max-height:240px;overflow:auto;margin-bottom:15px;"><div style="text-align:center;color:#666;font-size:.8rem;">No local saves yet.</div></div>
-    <div style="padding:10px;background:rgba(0,0,0,.4);border-radius:10px;border:1px solid rgba(255,255,255,.05);"><div class="section-title" style="margin-top:0;">ML Telemetry Dataset</div><div style="font-size:.7rem;color:#a0a0a0;margin-bottom:10px;display:flex;justify-content:space-between;"><span>Events Logged:</span><span id="dataset-count" style="color:#00b8ff;font-weight:800;">0</span></div><div class="flex-row"><button id="btn-import-lora" class="btn-small btn-good">Import (.jsonl)</button><button id="btn-export-lora" class="btn-small" style="background:rgba(0,184,255,.14);color:#00b8ff;border-color:rgba(0,184,255,.35);">Export (.jsonl)</button></div><input id="dataset-upload" type="file" accept=".jsonl" /><div class="tiny-note" style="margin-top:8px;">Feedback memory for future pattern bias.</div></div>
+    <div style="padding:10px;background:rgba(0,0,0,.4);border-radius:10px;border:1px solid rgba(255,255,255,.05);"><div class="section-title" style="margin-top:0;">ML Telemetry Dataset</div><div style="font-size:.7rem;color:#a0a0a0;margin-bottom:10px;display:flex;justify-content:space-between;"><span>Events Logged:</span><span id="dataset-count" style="color:#00b8ff;font-weight:800;">0</span></div><div class="flex-row"><button id="btn-import-lora" class="btn-small btn-good">Import (.jsonl)</button><button id="btn-export-lora" class="btn-small" style="background:rgba(0,184,255,.14);color:#00b8ff;border-color:rgba(0,184,255,.35);">Export Reviewed (.jsonl)</button></div><input id="dataset-upload" type="file" accept=".jsonl" /><div class="tiny-note" style="margin-top:8px;">Feedback memory for future pattern bias. Quarantined imports are excluded from export until reviewed.</div></div>
+    <div class="quarantine-panel">
+      <div class="section-title" style="margin-top:0;">Import Quarantine <span id="quarantine-badge" style="color:#f7b733;font-size:.62rem;">review gate</span></div>
+      <div id="quarantine-summary" class="quarantine-summary"><div class="tiny-note">Quarantine summary loading.</div></div>
+      <div id="quarantine-preview" class="quarantine-preview"><div class="tiny-note">No quarantined rows waiting for review.</div></div>
+      <div class="flex-row" style="margin-top:8px;"><button id="btn-promote-quarantine" class="btn-small btn-good">Promote Quarantined</button><button id="btn-delete-quarantine" class="btn-small btn-panic">Delete Quarantined</button></div>
+      <div class="tiny-note warn-note" style="margin-top:8px;">Imported rows start quarantined. Promote only after review; delete beats retention when a row is not useful.</div>
+    </div>
   </div>
 </div>
 
@@ -154,5 +161,6 @@
 <script type="module" src="./src/app.js"></script>
 <script type="module" src="./src/compiler/manualCompilerAssist.js"></script>
 <script type="module" src="./src/foundry/providerSettings.js"></script>
+<script type="module" src="./src/storage/quarantineReview.js"></script>
 </body>
 </html>
