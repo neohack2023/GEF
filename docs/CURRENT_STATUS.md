@@ -1,6 +1,6 @@
 # GEF Current Status
 
-Last updated after adding safe provider settings for local SLM and LLM proxy access.
+Last updated after adding the telemetry quarantine review gate and marking the docs index.
 
 This file is the quick handoff note for where the repo currently stands. Deeper design rules live in the specific docs; this page is the dashboard sticky note.
 
@@ -25,11 +25,12 @@ Observed so far:
 - Sliders update labels.
 - Studio, Foundry, and Library tabs switch.
 - Laptop Edge showed browser/CSP-style behavior around `blob:` media and a stale/optional Pyodide source-map request.
-- The laptop issue is currently treated as browser/deployment-specific until reproduced elsewhere.
 - Full local laptop smoke testing is still pending.
 - Playwright or other automated browser tests are not implemented yet.
-- Repo-side scripts now exist for local static serving, syntax checks, and a small security scan, but they still need to be run in a local checkout.
-- Foundry now has a provider settings panel for local SLM endpoints and user-controlled LLM proxy endpoints, but no provider execution adapter is live yet.
+- Repo-side scripts exist for local static serving, syntax checks, and a small security scan.
+- GitHub Actions rails now exist for Node CI, CI failure issue reporting, and PR handoff packets.
+- Foundry has provider settings for local SLM endpoints and user-controlled LLM proxy endpoints, but no provider adapter is live yet.
+- ✅ Imported telemetry now has a Library-side quarantine review gate before reviewed export.
 
 Current assumption:
 
@@ -41,7 +42,7 @@ Proceed carefully from a partially smoke-tested foundation.
 
 ## Recently completed
 
-### Preset and Foundry log rendering hardened
+### ✅ Preset and Foundry log rendering hardened
 
 Commit:
 
@@ -51,21 +52,15 @@ a0e27f2090377e4a1a75c1cc52d309c9e1ce9611
 
 What changed:
 
-- Preset card rendering no longer injects preset names through `innerHTML`.
-- Foundry/autopilot log rendering no longer injects log messages through `innerHTML`.
+- Preset card rendering no longer injects preset names through markup strings.
+- Foundry/autopilot log rendering no longer injects log messages through markup strings.
 - User/import/log text is rendered through DOM nodes and `textContent`.
-
-Why it matters:
-
-```text
-Imported or user-controlled text should display as text, not become markup.
-```
 
 Remaining note:
 
-- `renderModuleStack()` still uses `innerHTML` with curated module metadata. This is lower risk while module metadata is local and trusted, but should be cleaned when the module registry is formalized.
+- `renderModuleStack()` still uses markup strings with curated module metadata. This is lower risk while module metadata is local and trusted, but should be cleaned when the module registry is formalized.
 
-### JSONL import parsing hardened
+### ✅ JSONL import parsing hardened
 
 Commit:
 
@@ -80,14 +75,14 @@ What changed:
   - 5000 max rows
   - 10000 max characters per line
   - 5 max reported errors in the status summary
-- Import now parses line-by-line.
+- Import parses line-by-line.
 - Blank lines are skipped.
 - Non-object JSON rows are rejected.
 - Oversized lines are rejected.
 - Mixed files can import valid rows while reporting bad lines.
 - Read failures report a clear status message.
 
-### Imported telemetry rows now start quarantined
+### ✅ Imported telemetry rows start quarantined
 
 Commits:
 
@@ -98,39 +93,59 @@ cbe43e8cf5fc3e1c7dd47a462f4006376bfd3604 - Add telemetry import quarantine state
 
 What changed:
 
-- Parsed JSONL rows now preserve their original source line number.
+- Parsed JSONL rows preserve their original source line number.
 - `importTelemetryRows(rows, metadata)` accepts import metadata.
 - Imported rows are wrapped with `_gefImport` metadata.
-- `_gefImport.state` is set to `quarantined`.
-- `_gefImport.schemaStatus` is set to `unvalidated`.
-- `_gefImport.reviewed` is set to `false`.
-- Import metadata includes file name, imported timestamp, original index, line number, and parser version.
-- Import status messages now say `quarantined rows` instead of silently treating imports as trusted telemetry.
+- `_gefImport.state` starts as `quarantined`.
+- `_gefImport.schemaStatus` starts as `unvalidated`.
+- `_gefImport.reviewed` starts as `false`.
+- Import status messages say `quarantined rows` instead of silently treating imports as trusted telemetry.
 
-Current behavior examples:
+### ✅ Telemetry quarantine review gate added
+
+Commits:
 
 ```text
-Valid file:
-Imported 12 quarantined telemetry rows. Total: 12.
-
-Mixed valid and invalid file:
-Imported 10 quarantined rows, rejected 2. line 3: ...
-
-Oversized file:
-Import blocked: file exceeds 2 MB.
-
-Only bad rows:
-Import rejected 1 lines. First error line 1: ...
+b620d77fd1027b746c26870975f606381a9ba38c - Add telemetry quarantine review helpers
+0cccece9b1087db7684179fb7183ed3876a09f2f - Add telemetry quarantine review UI
+95acda024a8b5529ed5ca36c430181bac1546889 - Add telemetry quarantine review panel
+67d05d0092557161e87ec333233bcc32a058a334 - Include quarantine review module in syntax checks
+d7f9f7d920cd57e403b64ba194fec7157850bc34 - Document telemetry quarantine review flow
+462c8083dbb4cd25f6ca3192188a48af53148c2c - Add quarantine review doc to docs index
+65d2854d4cd0ab361941f4c0ceb86c82fe64c5ba - Add quarantine review doc to README map
+8c688ac2f8d72811f57b673f7c08d7800e24ae20 - Style telemetry quarantine review panel
+42a4b8f70e24dc965995c86fdc8dce55cb3ee4d7 - Mark quarantine review feature complete in docs index
 ```
+
+What changed:
+
+- Added `src/storage/quarantineReview.js`.
+- Added a Library-side **Import Quarantine** panel.
+- The panel shows total, local, quarantined, promoted, and exportable row counts.
+- The panel previews the first five quarantined rows with source file and line information.
+- Added **Promote Quarantined** and **Delete Quarantined** actions.
+- The telemetry export button now exports reviewed rows only.
+- Quarantined rows are excluded from export until promoted.
+- Export is blocked when only quarantined rows are available.
+- `npm run check:syntax` now includes the quarantine review module.
+- Added `docs/QUARANTINE_REVIEW.md`.
+- Added the feature to `docs/README.md` and the root README docs map.
 
 Important limitation:
 
-- Imported rows are quarantined and line-tagged, but they are not yet schema-normalized into `gef-feedback-row-v1`.
-- There is no quarantine review UI yet.
-- There is no promote/reject quarantine workflow yet.
-- Raw telemetry is still not training data.
+```text
+This is a local review gate, not full dataset certification.
+```
 
-### Media capability checks and browser/CSP warnings added
+Still pending:
+
+- per-row approve/delete controls
+- schema validation for `gef-feedback-row-v1`
+- privacy-state checks before export
+- dataset-card generation for reviewed exports
+- unit tests for promotion, deletion, and export filtering
+
+### ✅ Media capability checks and browser/CSP warnings added
 
 Commit:
 
@@ -140,30 +155,11 @@ Commit:
 
 What changed:
 
-- Added media capability detection for:
-  - object URL support
-  - `navigator.mediaDevices.getUserMedia`
-  - `canvas.captureStream`
-  - `MediaRecorder`
-  - `MediaRecorder.isTypeSupported`
-- Added preferred WebM MIME selection before recording.
-- Added boot-time media capability warnings for unsupported media paths.
-- Media upload now fails visibly if object URLs are unsupported.
-- Media upload now reports likely `blob:`/CSP blocking through the status bar.
-- Microphone flow now fails visibly when `getUserMedia` is unavailable, denied, or blocked by browser context.
-- Recording now fails visibly when `canvas.captureStream`, `MediaRecorder`, or object URLs are unavailable.
-- Recording fallback can create a `MediaRecorder` without a MIME type when type detection is unavailable.
-- Object URLs are now cleaned up through a delayed revoke helper for downloads and recording exports.
-- Uploaded media object URLs are revoked before replacing them with a new upload.
-- The media element source is reused instead of creating a new `MediaElementSourceNode` on every upload.
+- Added media capability detection for object URLs, microphone capture, canvas recording, MediaRecorder, and MIME support checks.
+- Media upload, microphone, and recording paths now fail visibly when unsupported or blocked.
+- Object URLs are cleaned up after downloads and media replacement.
 
-Why it matters:
-
-```text
-Media export and capture paths should fail loudly, not mysteriously.
-```
-
-### Project check scripts added
+### ✅ Project check scripts added
 
 Commits:
 
@@ -174,24 +170,17 @@ d4a71e80ac8c474f89d132fa066aa629c4541cad - Add security scan helper
 
 What changed:
 
-- Added `package.json` with scripts for:
+- Added `package.json` scripts for:
   - `npm run dev`
   - `npm run check`
   - `npm run check:syntax`
   - `npm run check:security`
   - `npm run smoke:manual`
-- `npm run dev` starts the existing Python static server on port 8080.
-- `npm run check:syntax` runs `node --check` across the current JavaScript modules.
+- `npm run dev` starts a Python static server on port 8080.
+- `npm run check:syntax` runs `node --check` across current JavaScript modules.
 - `npm run check:security` runs `tools/security-scan.mjs`.
-- The security scan searches `index.html` and `src/` for review-triggering patterns including `eval(`, `new Function`, API key wording, secret wording, and bearer-token-looking strings.
 
-Important limitation:
-
-```text
-These scripts are present in the repo, but they have not yet been run and verified in the user's local checkout.
-```
-
-### Safe provider settings added
+### ✅ Safe provider settings added
 
 Commits:
 
@@ -206,86 +195,85 @@ What changed:
 
 - Added `src/foundry/providerSettings.js`.
 - Added a Foundry Provider Access panel.
-- Provider modes now include:
-  - disabled
-  - local SLM endpoint
-  - LLM proxy endpoint
+- Provider modes include disabled, local SLM endpoint, and LLM proxy endpoint.
 - The UI stores endpoint, model name, and credential reference only.
 - Raw provider credentials are not requested or stored in the frontend.
-- Local SLM mode validates that the endpoint points to `localhost`, `127.0.0.1`, or `[::1]`.
+- Local SLM mode only accepts local endpoints.
 - LLM proxy mode expects a user-controlled backend/proxy to own provider credentials.
-- The UI can copy a provider proxy contract that describes the expected request/response boundary.
+- The UI can copy a provider proxy contract.
 
 Important limitation:
 
 ```text
-This is a configuration and contract layer only. GEF still does not call provider endpoints or execute provider output.
+This is a configuration and contract layer only. GEF still does not call provider endpoints.
 ```
 
-Safety rule:
+### ✅ Node CI failure issue rail added
+
+Commits:
 
 ```text
-Provider output is untrusted text until validated.
+3a3301990e32d77ade61380b498c2f27ff61c81b - Add Node CI failure report helper
+712424cfce0a15d9a6a4e17ecf09c7d7742268e9 - Add Node CI workflow with issue reporting
+bb793ece24597d3ec1d2ea1dd7b561a464dd7971 - Limit Node CI issue-reporting permissions
 ```
+
+What changed:
+
+- Added Node CI workflow for `npm run check`.
+- Added a CI failure report helper that extracts file/line style findings where possible.
+- Push failures on main can create or update GitHub Issues with commit, run, stage, and repair packet details.
+- CI issue-writing permissions are isolated to the reporting job.
+
+### ✅ PR handoff packet rail added
+
+Commits:
+
+```text
+ae1afeb4a82512a4c98109d869811b5de3f3cf07 - Add PR handoff report helper
+43bb82142b640a96b40f287eebc8fe1b6825c425 - Add PR handoff packet workflow
+```
+
+What changed:
+
+- Added PR handoff packet generation.
+- The packet summarizes changed files, test output, docs touched, safety-sensitive areas, and reviewer checklist.
+- The packet is written to the workflow summary and uploaded as an artifact.
 
 ---
 
 ## Current implementation limits
 
-### Evolve and iterate
+### Foundry / provider lane
 
-Evolve/iterate currently stage curated sandbox modules.
-
-They do not yet synthesize new visuals through an LLM or SLM provider.
-
-Current behavior:
-
-```text
-Evolve -> stages spectralGrid in sandbox
-Iterate -> stages chromaSlice in sandbox
-```
-
-Expected future behavior:
-
-```text
-Prompt -> provider suggestion -> schema validation -> sandbox preview -> user promotion
-```
-
-### Foundry / Autopilot
-
-Foundry remains a safe stub.
-
-It can generate seed ideas and queue safe notes, but it should not be treated as a live provider system yet.
-
-Provider settings now exist, but no provider execution adapter is live.
-
-No frontend provider keys should be added.
+- Foundry remains a safe stub for seed ideas and queued notes.
+- Provider settings exist, but no provider call path is live.
+- No frontend provider keys should be added.
 
 ### Dataset and memory
-
-Current telemetry is still legacy local JSONL plus `_gefImport` metadata for imported rows.
 
 The repo now has docs and partial implementation for:
 
 - safer JSONL parsing
 - per-row import line provenance
 - import quarantine state
-- `gef-feedback-row-v1`
-- memory scoring and retention
-- dataset split policy
-- import quarantine policy
+- Library-side quarantine review
+- reviewed-only telemetry export
+- `gef-feedback-row-v1` docs
+- memory scoring and retention docs
+- dataset split policy docs
 
 Still pending:
 
 - full `gef-feedback-row-v1` row builder
 - schema validation/migration
-- quarantine review UI
+- per-row quarantine review actions
 - training/eval/holdout export gates
 - memory promotion workflow
 
 ### Media and browser support
 
-Media support is now feature-detected, but not automatically cross-browser verified.
+Media support is feature-detected, but not automatically cross-browser verified.
 
 Still pending:
 
@@ -296,33 +284,18 @@ Still pending:
 
 ### Testing and automation
 
-Basic repo-side checks now exist, but this is not yet a full browser test harness.
+Basic repo-side checks and GitHub Actions rails exist, but this is not yet a full browser test harness.
 
 Still pending:
 
 - local execution of `npm run check`
+- verification of the first GitHub Actions runs
 - Playwright installation/configuration
 - boot smoke test
 - sandbox panic test
 - preset save/load test
 - JSONL import/export tests
 - media unsupported-path tests
-- GitHub Actions workflow
-
-### Provider access
-
-Provider settings exist, but the provider adapter boundary is not implemented yet.
-
-Still pending:
-
-- provider request schema in code
-- provider response schema in code
-- timeout and abort handling
-- proxy/local endpoint health check
-- response validation before sandbox preview
-- diagnostics and failure fallback
-- prompt injection regression tests
-- explicit user promotion requirement after provider suggestions
 
 ---
 
@@ -331,7 +304,7 @@ Still pending:
 Next target:
 
 ```text
-Run local checks, finish Phase 0 manual smoke checks, then add provider schema validation or Playwright.
+Run local checks, finish Phase 0 manual smoke checks, then choose the next creative/runtime feature.
 ```
 
 Build goals:
@@ -342,17 +315,10 @@ Build goals:
 - Confirm `src/app.js` loads as an ES module locally.
 - Confirm sandbox toggle and panic reset behavior.
 - Confirm preset save/load/delete behavior.
-- Confirm JSONL export/import behavior after quarantine changes.
+- Confirm JSONL import, quarantine preview, promote, delete, and reviewed export behavior.
 - Confirm media upload/mic/recording behavior on the laptop browser that showed CSP symptoms.
 - Confirm provider settings save/load in Foundry.
 - Add repeatable Playwright smoke tests after manual checks stabilize.
-- Add provider request/response schema validation before any provider call path is introduced.
-
-Why this is next:
-
-```text
-The project now has a starter check loop and a provider settings shell. It needs local execution results, browser smoke tests, and provider schema validation before any provider call path exists.
-```
 
 ---
 
@@ -400,6 +366,10 @@ Test checklist:
 - Mixed JSONL imports valid rows as quarantined and reports bad lines.
 - Oversized JSONL is blocked.
 - Imported rows include `_gefImport.state = "quarantined"` and a source line number.
+- Library Import Quarantine panel shows row counts.
+- Promote Quarantined marks imported rows reviewed/exportable.
+- Delete Quarantined removes quarantined imports.
+- Export Reviewed skips quarantined rows.
 - Media upload works where browser policy allows it.
 - Media upload reports a useful message if `blob:` media is blocked.
 - Microphone path either works or reports denial/unavailable clearly.
@@ -413,5 +383,5 @@ Test checklist:
 Use this if resuming later:
 
 ```text
-Continue GEF from CURRENT_STATUS.md. Phase 1 hardening now includes preset/Foundry log text rendering, safer JSONL import parsing, import quarantine metadata with line-number provenance, and media capability/CSP warning checks. Repo-side starter scripts include npm run dev, npm run check:syntax, and npm run check:security. Foundry now has safe provider settings for local SLM and LLM proxy endpoints, but no provider execution adapter is live. Next: run local checks and Phase 0 manual smoke tests, then add provider request/response schema validation or Playwright. Do not implement provider execution without validator/sandbox boundaries. Keep changes small and verify against live GitHub before committing.
+Continue GEF from CURRENT_STATUS.md. Safety rails now include text-safe preset/log rendering, safer JSONL import parsing, import quarantine metadata with line-number provenance, Library-side quarantine review, reviewed-only telemetry export, media capability checks, safe provider settings, Node CI failure issue reporting, and PR handoff packets. Provider settings exist, but no provider call path is live. Next: run local checks and Phase 0 manual smoke tests, then choose the next creative/runtime feature. Keep changes small and verify against live GitHub before committing.
 ```
