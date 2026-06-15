@@ -9,6 +9,7 @@ Project planning and architecture notes for GEF Sandbox Compiler v2.3.
 ## Build plans
 
 - [SLM Option Plan](./SLM_OPTION_PLAN.md) — plan for adding browser-local and localhost small language model providers as alternatives to cloud LLM workflows.
+- ✅ [Local Ollama SLM Lane](./LOCAL_OLLAMA_SLM.md) — first local SLM integration for validated curated-module suggestions through Ollama.
 - [Feedback and Memory System Plan](./FEEDBACK_MEMORY_SYSTEM.md) — plan for turning user feedback, validation results, telemetry, and local memory into reusable datasets for LLM/SLM improvement.
 
 ## Core docs
