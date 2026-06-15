@@ -1,6 +1,7 @@
 import { logAutopilot } from '../autopilot/autopilotStub.js';
 import { moduleCatalog } from '../render/visualModules.js';
 import { listOllamaModels, requestOllamaModuleSuggestion } from '../slm/providers/ollamaProvider.js';
+import { SLM_LANE_IDS, getDefaultSlmModel } from '../slm/slmLanes.js';
 import { validateModuleSuggestion } from '../slm/validators/moduleSuggestionValidator.js';
 import { readProviderSettings } from './providerSettings.js';
 
@@ -67,7 +68,7 @@ function getConfiguredLocalSlm() {
 
   return {
     endpoint: settings.endpoint || 'http://localhost:11434',
-    model: settings.model || 'llama3.2:3b'
+    model: settings.model || getDefaultSlmModel(SLM_LANE_IDS.LIGHT_HELPER)
   };
 }
 
