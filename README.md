@@ -42,6 +42,7 @@ The current browser prototype includes:
 - sandbox/main preview separation
 - preset save/load support
 - telemetry JSONL export/import
+- imported telemetry quarantine review before reviewed export
 - safe Foundry/Autopilot stubs
 - snapshot and WebM capture paths
 - documentation for architecture, safety, memory, datasets, presets, and testing
@@ -59,6 +60,7 @@ Key documents:
 - [`AUDIO_METRICS.md`](./docs/AUDIO_METRICS.md) — audio analysis behavior and metric definitions.
 - [`PRESET_FORMAT.md`](./docs/PRESET_FORMAT.md) — local preset shape, versioning, migration, and compatibility rules.
 - [`DATASET_FORMAT.md`](./docs/DATASET_FORMAT.md) — telemetry rows, JSONL format, dataset promotion, and cleaning rules.
+- [`QUARANTINE_REVIEW.md`](./docs/QUARANTINE_REVIEW.md) — local review gate for imported JSONL rows before reviewed export.
 - [`MEMORY_POLICY.md`](./docs/MEMORY_POLICY.md) — retention, distillation, forgetting, scoring, and privacy controls.
 - [`TESTING.md`](./docs/TESTING.md) — smoke tests, media checks, security regressions, adapter tests, and release checklist.
 - [`SLM_OPTION_PLAN.md`](./docs/SLM_OPTION_PLAN.md) — plan for browser-local and localhost model providers.
