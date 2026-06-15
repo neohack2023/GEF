@@ -1,6 +1,6 @@
 # GEF Current Status
 
-Last updated after adding the telemetry quarantine review gate and marking the docs index.
+Last updated after adding the local Ollama SLM suggestion lane.
 
 This file is the quick handoff note for where the repo currently stands. Deeper design rules live in the specific docs; this page is the dashboard sticky note.
 
@@ -29,8 +29,9 @@ Observed so far:
 - Playwright or other automated browser tests are not implemented yet.
 - Repo-side scripts exist for local static serving, syntax checks, and a small security scan.
 - GitHub Actions rails now exist for Node CI, CI failure issue reporting, and PR handoff packets.
-- Foundry has provider settings for local SLM endpoints and user-controlled LLM proxy endpoints, but no provider adapter is live yet.
-- ✅ Imported telemetry now has a Library-side quarantine review gate before reviewed export.
+- Foundry has provider settings for local SLM endpoints and user-controlled LLM proxy endpoints.
+- ✅ Local Ollama SLM can now return validated curated-module suggestions.
+- ✅ Imported telemetry has a Library-side quarantine review gate before reviewed export.
 
 Current assumption:
 
@@ -41,6 +42,64 @@ Proceed carefully from a partially smoke-tested foundation.
 ---
 
 ## Recently completed
+
+### ✅ Local Ollama SLM suggestion lane added
+
+Commits:
+
+```text
+9b8e34574e2a646e555204e3acba3c167b2a2c73 - Add local Ollama SLM provider
+02d1d469fa5803cdf2d51964f114c17d5e4d8a60 - Add SLM module suggestion validator
+6d679273d6acb461683434b893be35ea9e40b0f6 - Add local SLM module suggestion UI
+a0e4b54ecc62d359e8f192d777854905cb1dc8c6 - Load local SLM suggestion UI
+4ff727a768c775fa28138e686b69467c270318e7 - Include local SLM modules in syntax checks
+c329b02558500f5a7f0004f38bff3b525207653c - Document local Ollama SLM lane
+a3bc0e7cc480eb2d8f6ab949bcf53797def368a2 - Add local Ollama SLM doc to docs index
+ae3f924d606482d75eeba83206aad7489ec7abb2 - Add local Ollama SLM lane to README
+```
+
+What changed:
+
+- Added `src/slm/providers/ollamaProvider.js`.
+- Added `src/slm/validators/moduleSuggestionValidator.js`.
+- Added `src/foundry/localSlmSuggest.js`.
+- Foundry Provider Access now gains runtime controls for:
+  - **Test Ollama**
+  - **Ask Local SLM**
+- The Ollama provider only accepts local endpoints.
+- The Ollama call uses non-streaming JSON-shaped generation.
+- The first SLM task is curated module suggestion only.
+- The validator checks schema name, version, module id, stage, confidence, and reason.
+- Valid suggestions are logged and displayed.
+- Invalid suggestions are rejected and logged.
+- No runtime module is applied automatically.
+- No generated code is executed.
+- `npm run check:syntax` now includes the new SLM modules.
+- Added `docs/LOCAL_OLLAMA_SLM.md`.
+- Added the new doc to the root README and docs index.
+
+Recommended local settings:
+
+```text
+Provider mode: Local SLM Endpoint
+Endpoint: http://localhost:11434
+Model: llama3.2:3b
+Credential reference: local-only
+```
+
+Important limitation:
+
+```text
+This is the first AI re-entry point, not a full provider execution adapter.
+```
+
+Still pending:
+
+- browser/local verification against a running Ollama service
+- visible loading/disabled button state while a request is active
+- validated **Preview Suggested Module** action
+- SLM request/response telemetry row type
+- local proxy fallback if direct browser-to-Ollama fetch is blocked
 
 ### ✅ Preset and Foundry log rendering hardened
 
@@ -115,6 +174,7 @@ d7f9f7d920cd57e403b64ba194fec7157850bc34 - Document telemetry quarantine review 
 65d2854d4cd0ab361941f4c0ceb86c82fe64c5ba - Add quarantine review doc to README map
 8c688ac2f8d72811f57b673f7c08d7800e24ae20 - Style telemetry quarantine review panel
 42a4b8f70e24dc965995c86fdc8dce55cb3ee4d7 - Mark quarantine review feature complete in docs index
+5d62180e8d3dbd19b2cd10cdfb9cad192d20c7c9 - Mark quarantine review complete in current status
 ```
 
 What changed:
@@ -127,7 +187,7 @@ What changed:
 - The telemetry export button now exports reviewed rows only.
 - Quarantined rows are excluded from export until promoted.
 - Export is blocked when only quarantined rows are available.
-- `npm run check:syntax` now includes the quarantine review module.
+- `npm run check:syntax` includes the quarantine review module.
 - Added `docs/QUARANTINE_REVIEW.md`.
 - Added the feature to `docs/README.md` and the root README docs map.
 
@@ -202,12 +262,6 @@ What changed:
 - LLM proxy mode expects a user-controlled backend/proxy to own provider credentials.
 - The UI can copy a provider proxy contract.
 
-Important limitation:
-
-```text
-This is a configuration and contract layer only. GEF still does not call provider endpoints.
-```
-
 ### ✅ Node CI failure issue rail added
 
 Commits:
@@ -246,9 +300,11 @@ What changed:
 
 ### Foundry / provider lane
 
-- Foundry remains a safe stub for seed ideas and queued notes.
-- Provider settings exist, but no provider call path is live.
-- No frontend provider keys should be added.
+- Local Ollama SLM suggestions now exist.
+- Provider settings exist for local SLM and LLM proxy modes.
+- The local SLM lane can suggest curated modules only.
+- No provider call path can write code into the renderer.
+- No frontend provider credentials should be added.
 
 ### Dataset and memory
 
@@ -295,6 +351,7 @@ Still pending:
 - sandbox panic test
 - preset save/load test
 - JSONL import/export tests
+- Local Ollama SLM smoke test
 - media unsupported-path tests
 
 ---
@@ -304,7 +361,7 @@ Still pending:
 Next target:
 
 ```text
-Run local checks, finish Phase 0 manual smoke checks, then choose the next creative/runtime feature.
+Run local checks and smoke-test the local Ollama SLM lane against llama3.2:3b.
 ```
 
 Build goals:
@@ -312,12 +369,15 @@ Build goals:
 - Run `npm run check` locally.
 - Run `npm run dev` locally and open `http://localhost:8080`.
 - Confirm local-server boot.
-- Confirm `src/app.js` loads as an ES module locally.
+- Confirm Provider Access can save Local SLM settings.
+- Confirm `Test Ollama` can list local models.
+- Confirm `Ask Local SLM` returns a validated curated-module suggestion.
+- Confirm invalid or blocked Ollama responses fail visibly.
+- Confirm no runtime module is applied automatically.
 - Confirm sandbox toggle and panic reset behavior.
 - Confirm preset save/load/delete behavior.
 - Confirm JSONL import, quarantine preview, promote, delete, and reviewed export behavior.
 - Confirm media upload/mic/recording behavior on the laptop browser that showed CSP symptoms.
-- Confirm provider settings save/load in Foundry.
 - Add repeatable Playwright smoke tests after manual checks stabilize.
 
 ---
@@ -342,6 +402,13 @@ Open:
 http://localhost:8080
 ```
 
+For local Ollama:
+
+```bash
+ollama serve
+ollama pull llama3.2:3b
+```
+
 Test checklist:
 
 - App boots.
@@ -349,23 +416,18 @@ Test checklist:
 - Status shows stable engine active.
 - Sliders update labels.
 - Studio, Foundry, and Library tabs switch.
+- Foundry Provider Access appears.
+- Provider mode can switch to Local SLM Endpoint.
+- Endpoint can be saved as `http://localhost:11434`.
+- Model can be saved as `llama3.2:3b`.
+- `Test Ollama` reports reachable local models.
+- `Ask Local SLM` logs a valid curated-module suggestion.
+- Invalid SLM output is rejected by the validator.
+- No runtime module is applied automatically by the SLM lane.
 - Sandbox toggle works.
 - Panic reset clears sandbox state.
 - Save/load/delete preset works.
-- Unsafe preset name displays as text.
-- Foundry logs display as text.
-- Provider Access panel appears in Foundry.
-- Provider mode can switch between disabled, local SLM, and LLM proxy.
-- Provider settings reject invalid URLs.
-- Local SLM mode rejects non-local endpoints.
-- Provider settings save/load endpoint, model, and credential reference.
-- Provider settings do not ask for raw provider credentials.
-- Copy Proxy Contract works where clipboard permissions allow it.
 - Valid JSONL imports as quarantined rows.
-- Invalid JSONL reports line errors.
-- Mixed JSONL imports valid rows as quarantined and reports bad lines.
-- Oversized JSONL is blocked.
-- Imported rows include `_gefImport.state = "quarantined"` and a source line number.
 - Library Import Quarantine panel shows row counts.
 - Promote Quarantined marks imported rows reviewed/exportable.
 - Delete Quarantined removes quarantined imports.
@@ -374,7 +436,6 @@ Test checklist:
 - Media upload reports a useful message if `blob:` media is blocked.
 - Microphone path either works or reports denial/unavailable clearly.
 - Recording either works or reports unsupported clearly.
-- Recording export creates a WebM where supported.
 
 ---
 
@@ -383,5 +444,5 @@ Test checklist:
 Use this if resuming later:
 
 ```text
-Continue GEF from CURRENT_STATUS.md. Safety rails now include text-safe preset/log rendering, safer JSONL import parsing, import quarantine metadata with line-number provenance, Library-side quarantine review, reviewed-only telemetry export, media capability checks, safe provider settings, Node CI failure issue reporting, and PR handoff packets. Provider settings exist, but no provider call path is live. Next: run local checks and Phase 0 manual smoke tests, then choose the next creative/runtime feature. Keep changes small and verify against live GitHub before committing.
+Continue GEF from CURRENT_STATUS.md. The first AI re-entry lane is now Local Ollama SLM for validated curated-module suggestions using llama3.2:3b. It can test Ollama, ask for one module suggestion, validate the JSON response against the curated module catalog, and log accepted/rejected suggestions. It does not apply runtime changes automatically and does not execute generated code. Next: run npm run check, smoke-test Ollama locally, then decide whether to add Preview Suggested Module or SLM telemetry rows.
 ```
