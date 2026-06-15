@@ -27,6 +27,78 @@ function setDatasetCount(total) {
   if (counter) counter.textContent = String(total);
 }
 
+function injectQuarantineStyles() {
+  if (document.getElementById('quarantine-review-style')) return;
+
+  const style = document.createElement('style');
+  style.id = 'quarantine-review-style';
+  style.textContent = `
+    .quarantine-panel {
+      margin-top: 12px;
+      padding: 10px;
+      background: rgba(247,183,51,.06);
+      border: 1px solid rgba(247,183,51,.28);
+      border-radius: 10px;
+    }
+
+    .quarantine-summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin: 8px 0;
+    }
+
+    .quarantine-stat-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px;
+      background: rgba(0,0,0,.36);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 7px;
+      color: #a0a0a0;
+      font-size: .65rem;
+    }
+
+    .quarantine-stat-row strong {
+      color: #f7b733;
+      font-family: ui-monospace, monospace;
+    }
+
+    .quarantine-preview {
+      max-height: 110px;
+      overflow: auto;
+      padding: 7px;
+      border-radius: 8px;
+      background: rgba(0,0,0,.34);
+      border: 1px solid rgba(255,255,255,.05);
+    }
+
+    .quarantine-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 7px;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      color: #d7d7d7;
+      font-size: .66rem;
+    }
+
+    .quarantine-row:last-child { border-bottom: 0; }
+
+    .quarantine-row-meta {
+      color: #f7b733;
+      font-family: ui-monospace, monospace;
+    }
+
+    .quarantine-panel button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 function makeRow(label, value) {
   const row = document.createElement('div');
   row.className = 'quarantine-stat-row';
@@ -111,6 +183,8 @@ function downloadText(filename, text, type = 'text/plain') {
 }
 
 function bindQuarantineReview() {
+  injectQuarantineStyles();
+
   $('tab-library')?.addEventListener('click', () => window.setTimeout(renderQuarantineReview, 0));
   $('dataset-upload')?.addEventListener('change', () => window.setTimeout(renderQuarantineReview, 150));
   $('save-btn')?.addEventListener('click', () => window.setTimeout(renderQuarantineReview, 0));
