@@ -1,14 +1,14 @@
 # Local Ollama SLM Lane
 
-GEF can now use a local Ollama model as the first AI lane back into Foundry.
+GEF can use local Ollama models as controlled AI lanes inside Foundry.
 
-This is intentionally small.
+This is intentionally split into jobs.
 
 ```text
 Local SLM suggests. GEF validates. User promotes.
 ```
 
-The current lane does not generate runtime code and does not change the renderer directly.
+The first implemented lane does not generate runtime code and does not change the renderer directly.
 
 ---
 
@@ -17,7 +17,9 @@ The current lane does not generate runtime code and does not change the renderer
 Current implementation:
 
 - `src/slm/providers/ollamaProvider.js`
+- `src/slm/slmLanes.js`
 - `src/slm/validators/moduleSuggestionValidator.js`
+- `src/slm/validators/generatedVisualCodePolicy.js`
 - `src/foundry/promptBuilder.js`
 - `src/foundry/localSlmSuggest.js`
 
@@ -27,6 +29,29 @@ The Foundry Provider Access panel gains two local SLM controls at runtime:
 
 - **Test Ollama**
 - **Ask Local SLM**
+
+---
+
+## Local model lanes
+
+GEF now defines two active local Ollama lanes:
+
+| Lane | Model | Job |
+| --- | --- | --- |
+| Light helper | `llama3.2:3b` | Prompt rewriting, idea routing, feedback summaries, memory distillation, and curated-module suggestions. |
+| Code foundry | `qwen2.5-coder:3b` | Generate, lint, repair, and retry candidate Canvas2D visual code artifacts before sandbox review. |
+
+Optional heavier lane:
+
+| Lane | Model | Job |
+| --- | --- | --- |
+| Heavier code repair | `qwen2.5-coder:7b` | Slower but stronger repair and reasoning when local hardware can handle it. |
+
+The lane profiles live in:
+
+```text
+src/slm/slmLanes.js
+```
 
 ---
 
@@ -55,18 +80,39 @@ Use Ollama locally:
 ollama serve
 ```
 
-Pull the small model we have already been aiming at:
+Pull the small helper model:
 
 ```bash
 ollama pull llama3.2:3b
 ```
 
-Recommended GEF settings:
+Pull the code-focused model:
+
+```bash
+ollama pull qwen2.5-coder:3b
+```
+
+Optional heavier repair model:
+
+```bash
+ollama pull qwen2.5-coder:7b
+```
+
+Recommended GEF settings for the current curated-module suggestion lane:
 
 ```text
 Provider mode: Local SLM Endpoint
 Endpoint: http://localhost:11434
 Model: llama3.2:3b
+Credential reference: local-only
+```
+
+When the Code Foundry lane is wired into the UI, use:
+
+```text
+Provider mode: Local SLM Endpoint
+Endpoint: http://localhost:11434
+Model: qwen2.5-coder:3b
 Credential reference: local-only
 ```
 
@@ -76,7 +122,7 @@ No provider credentials belong in the frontend.
 
 ## Current task: curated module suggestion
 
-The local SLM receives:
+The current local SLM receives:
 
 - the final editable Foundry prompt text
 - selected stage
@@ -111,9 +157,31 @@ If validation passes, the suggestion is displayed and logged. It does not apply 
 
 ---
 
-## Why this lane is safe enough for first AI re-entry
+## Future task: candidate visual code artifact
 
-This lane only lets the model choose from existing curated modules.
+The Code Foundry lane may draft candidate Canvas2D visual code after the validator and sandbox path is wired.
+
+It must not directly alter the main runtime.
+
+Required path:
+
+```text
+prompt -> qwen2.5-coder:3b -> static policy -> compile smoke test -> runtime smoke test -> repair retry -> sandbox preview -> user promotion
+```
+
+The static policy screen lives in:
+
+```text
+src/slm/validators/generatedVisualCodePolicy.js
+```
+
+Do not confuse this lane with the current curated-module suggestion button. The suggestion button chooses from existing modules. Code Foundry drafts code artifacts for a later sandbox-only flow.
+
+---
+
+## Why the current lane is safe enough for first AI re-entry
+
+The currently wired lane only lets the model choose from existing curated modules.
 
 It does not:
 
@@ -152,5 +220,6 @@ Good next steps:
 4. Add timeout/abort UI state for long local model calls.
 5. Add a local proxy fallback if direct browser-to-Ollama fetch is blocked.
 6. Add prompt-builder presets for common visual directions.
+7. Wire Code Foundry into a sandbox-only generated-artifact flow.
 
-Do not add generated visual code execution here.
+Do not add generated visual code execution without the full static policy, smoke test, repair loop, sandbox preview, and user-promotion path.
