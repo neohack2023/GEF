@@ -1,0 +1,89 @@
+name: Node CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  node-ci:
+    name: npm run check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run project checks
+        id: checks
+        run: |
+          set +e
+          npm run check > ci-output.log 2>&1
+          status=$?
+          cat ci-output.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Build CI failure packet
+        if: steps.checks.outputs.status != '0'
+        run: node tools/ci-failure-report.mjs ci-output.log
+        env:
+          CI_FAILURE_STAGE: npm run check
+
+      - name: Upload CI failure packet
+        if: steps.checks.outputs.status != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-ci-failure-${{ github.run_id }}
+          path: |
+            ci-output.log
+            ci-issue-title.txt
+            ci-issue-body.md
+            ci-failure-summary.md
+
+      - name: Add CI failure summary
+        if: steps.checks.outputs.status != '0'
+        run: cat ci-failure-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update CI failure issue
+        if: steps.checks.outputs.status != '0' && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="$(cat ci-issue-title.txt)"
+          existing_issue="$(gh issue list \
+            --state open \
+            --search "${GITHUB_SHA} in:body \"Node CI failure\"" \
+            --json number \
+            --jq '.[0].number // empty')"
+
+          if [ -n "$existing_issue" ]; then
+            gh issue comment "$existing_issue" --body-file ci-issue-body.md
+          else
+            gh label create ci-failure --color D73A4A --description "Automated CI failure report" --force || true
+            gh label create automation --color 6F42C1 --description "Created or maintained by automation" --force || true
+            gh issue create \
+              --title "$title" \
+              --body-file ci-issue-body.md \
+              --label ci-failure \
+              --label automation
+          fi
+
+      - name: Fail workflow when checks fail
+        if: steps.checks.outputs.status != '0'
+        run: exit 1
