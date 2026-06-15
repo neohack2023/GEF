@@ -18,12 +18,32 @@ Current implementation:
 
 - `src/slm/providers/ollamaProvider.js`
 - `src/slm/validators/moduleSuggestionValidator.js`
+- `src/foundry/promptBuilder.js`
 - `src/foundry/localSlmSuggest.js`
+
+The Foundry panel has an editable prompt window. The Prompt Builder adds controls around that window, but the textarea stays the source of truth.
 
 The Foundry Provider Access panel gains two local SLM controls at runtime:
 
 - **Test Ollama**
 - **Ask Local SLM**
+
+---
+
+## Prompt Builder
+
+The Prompt Builder is a helper for building better local SLM requests without hiding the text from the user.
+
+It adds:
+
+- quick chips such as Bass Pulse, Glitch Cuts, Grid Structure, Bloom Hits, Calm Drift, and High Energy
+- sliders for density, motion, and audio reactivity
+- a texture direction selector
+- **Add Builder Details to Prompt**
+
+Every control appends normal editable text into the Foundry prompt window.
+
+The user can still edit, remove, rewrite, or reorder anything before pressing **Ask Local SLM**.
 
 ---
 
@@ -58,7 +78,7 @@ No provider credentials belong in the frontend.
 
 The local SLM receives:
 
-- the Foundry seed prompt
+- the final editable Foundry prompt text
 - selected stage
 - the curated module catalog
 
@@ -131,5 +151,6 @@ Good next steps:
 3. Add JSON schema files under `src/slm/schemas/`.
 4. Add timeout/abort UI state for long local model calls.
 5. Add a local proxy fallback if direct browser-to-Ollama fetch is blocked.
+6. Add prompt-builder presets for common visual directions.
 
 Do not add generated visual code execution here.
