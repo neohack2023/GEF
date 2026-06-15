@@ -36,11 +36,29 @@ export function getTelemetry() {
   return readJson(TELEMETRY_KEY, []);
 }
 
+export function writeTelemetry(rows) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  writeJson(TELEMETRY_KEY, safeRows);
+  return safeRows;
+}
+
 export function appendTelemetry(record) {
   const all = getTelemetry();
   all.push(record);
   writeJson(TELEMETRY_KEY, all);
   return all;
+}
+
+function isQuarantinedImport(row) {
+  return row?._gefImport?.state === 'quarantined';
+}
+
+function isRejectedImport(row) {
+  return row?._gefImport?.state === 'rejected';
+}
+
+function isPromotedImport(row) {
+  return row?._gefImport?.state === 'promoted';
 }
 
 function wrapImportedRows(rows, metadata = {}) {
@@ -75,8 +93,75 @@ export function importTelemetryRows(rows, metadata = {}) {
   return all;
 }
 
+export function getTelemetryQuarantineSummary() {
+  const rows = getTelemetry();
+  const quarantined = rows.filter(isQuarantinedImport).length;
+  const promoted = rows.filter(isPromotedImport).length;
+  const rejected = rows.filter(isRejectedImport).length;
+  const local = rows.length - rows.filter((row) => row?._gefImport).length;
+
+  return {
+    total: rows.length,
+    local,
+    quarantined,
+    promoted,
+    rejected,
+    exportable: rows.filter(isExportableTelemetryRow).length
+  };
+}
+
+export function getQuarantinedTelemetryRows(limit = 5) {
+  return getTelemetry()
+    .map((row, index) => ({ row, index }))
+    .filter((entry) => isQuarantinedImport(entry.row))
+    .slice(0, limit);
+}
+
+export function promoteQuarantinedTelemetryRows() {
+  const reviewedAt = new Date().toISOString();
+  const rows = getTelemetry();
+  let promoted = 0;
+
+  const nextRows = rows.map((row) => {
+    if (!isQuarantinedImport(row)) return row;
+    promoted += 1;
+    return {
+      ...row,
+      _gefImport: {
+        ...row._gefImport,
+        state: 'promoted',
+        schemaStatus: 'accepted-for-local-review',
+        reviewed: true,
+        reviewedAt
+      }
+    };
+  });
+
+  writeTelemetry(nextRows);
+  return { rows: nextRows, promoted };
+}
+
+export function deleteQuarantinedTelemetryRows() {
+  const rows = getTelemetry();
+  const nextRows = rows.filter((row) => !isQuarantinedImport(row));
+  const deleted = rows.length - nextRows.length;
+  writeTelemetry(nextRows);
+  return { rows: nextRows, deleted };
+}
+
+export function isExportableTelemetryRow(row) {
+  return !isQuarantinedImport(row) && !isRejectedImport(row);
+}
+
+export function exportReviewedTelemetryJsonl() {
+  return getTelemetry()
+    .filter(isExportableTelemetryRow)
+    .map((row) => JSON.stringify(row))
+    .join('\n');
+}
+
 export function exportTelemetryJsonl() {
-  return getTelemetry().map((row) => JSON.stringify(row)).join('\n');
+  return exportReviewedTelemetryJsonl();
 }
 
 export function getAutopilotLogs() {
