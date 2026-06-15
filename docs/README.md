@@ -18,6 +18,6 @@ Project planning and architecture notes for GEF Sandbox Compiler v2.3.
 - [Audio Metrics](./AUDIO_METRICS.md) — bass, mid, treble, beat, glitch, centroid, RMS, smoothing, bin mapping, and future Hz-based metric upgrades.
 - [Preset Format](./PRESET_FORMAT.md) — local preset JSON shape, schema versioning, migration, import/export rules, and compatibility policy.
 - [Dataset Format](./DATASET_FORMAT.md) — JSONL row shape, schema validation, migration, splits, cleaning, training derivations, and dataset-card rules.
-- [Telemetry Quarantine Review](./QUARANTINE_REVIEW.md) — local review gate for imported JSONL rows before reviewed export.
+- ✅ [Telemetry Quarantine Review](./QUARANTINE_REVIEW.md) — local review gate for imported JSONL rows before reviewed export.
 - [Memory Policy](./MEMORY_POLICY.md) — retention, distillation, forgetting, privacy controls, memory scoring, retrieval rules, and dataset promotion policy.
-- [Testing](./TESTING.md) — browser smoke tests, media/audio checks, storage/import tests, security regressions, adapter validation, and release checklist.
+- [Testing](./TESTING.md) — browser smoke tests, media checks, security regressions, adapter validation, and release checklist.
