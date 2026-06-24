@@ -15,7 +15,7 @@ This file is the human-readable task ledger for GEF.
 - [ ] Add dataset fixture validation for telemetry JSONL rows.
 - [ ] Add preset fixture validation for import/export compatibility.
 - [ ] Add generated visual code policy regression fixtures.
-- [ ] Finish moving remaining UI catalog reads from `visualModules.js` to `moduleRegistry.js`.
+- [ ] Optionally move legacy UI imports from `visualModules.js` to `moduleRegistry.js` after the compatibility wrapper is no longer useful.
 
 ## Done
 
@@ -24,3 +24,4 @@ This file is the human-readable task ledger for GEF.
 - [x] Add current `npm run check` script for syntax and security scanning.
 - [x] Add ESLint flat config and wire linting into `npm run check`.
 - [x] Add initial render module registry scaffold for runtime/provider lookups.
+- [x] Remove duplicated module catalog metadata from `visualModules.js`.
