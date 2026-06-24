@@ -72,3 +72,32 @@ export const visualModules = {
     ctx.fillRect(0, 0, w, h);
   }
 };
+
+// Compatibility export for existing UI code. New runtime/provider work should import
+// module metadata from src/render/moduleRegistry.js.
+export const moduleCatalog = [
+  {
+    id: 'voidCore',
+    name: 'Void Core',
+    stage: 'BASE',
+    description: 'Primary audio-reactive ring field.'
+  },
+  {
+    id: 'spectralGrid',
+    name: 'Spectral Grid',
+    stage: 'OVERLAY',
+    description: 'Audio-bent line lattice overlay.'
+  },
+  {
+    id: 'beatBloom',
+    name: 'Beat Bloom',
+    stage: 'POST_FX',
+    description: 'Beat-triggered radial light pulse.'
+  },
+  {
+    id: 'chromaSlice',
+    name: 'Chroma Slice',
+    stage: 'POST_FX',
+    description: 'Glitch threshold slicing effect.'
+  }
+];
