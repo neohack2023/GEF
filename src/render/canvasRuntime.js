@@ -12,6 +12,16 @@ function isCanvas2dStackModule(moduleDef) {
   return isCanvas2dModule(moduleDef) && moduleDef.stage !== MODULE_STAGES.BASE;
 }
 
+function summarizeModule(moduleDef) {
+  if (!moduleDef) return null;
+  return {
+    id: moduleDef.id,
+    name: moduleDef.name,
+    stage: moduleDef.stage,
+    lane: moduleDef.lane
+  };
+}
+
 export class CanvasRuntime {
   constructor({ mainCanvas, sandboxCanvas, feedbackCanvas, compositeCanvas }) {
     this.mainCanvas = mainCanvas;
@@ -29,6 +39,36 @@ export class CanvasRuntime {
     this.sandboxModuleId = null;
     this.sandboxActive = false;
     this.previewMode = 'AUTO';
+
+    this.installSandboxPreviewBridge();
+  }
+
+  installSandboxPreviewBridge() {
+    if (typeof window === 'undefined') return;
+
+    window.GEF_SANDBOX_PREVIEW = Object.freeze({
+      previewValidatedModule: (suggestion) => this.previewValidatedModule(suggestion)
+    });
+  }
+
+  previewValidatedModule(suggestion) {
+    const moduleId = typeof suggestion === 'string' ? suggestion : suggestion?.moduleId;
+    const moduleDef = getModuleById(moduleId);
+
+    if (!isCanvas2dModule(moduleDef)) {
+      return {
+        ok: false,
+        error: 'moduleId must resolve to a curated Canvas2D module.'
+      };
+    }
+
+    this.setSandboxModule(moduleDef.id);
+    this.setSandboxActive(true);
+
+    return {
+      ok: true,
+      module: summarizeModule(moduleDef)
+    };
   }
 
   resize(w, h) {
