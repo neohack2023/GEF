@@ -1,11 +1,14 @@
 import { logAutopilot } from '../autopilot/autopilotStub.js';
-import { getModuleCatalog } from '../render/moduleRegistry.js';
+import { RENDER_LANES, getModuleById, getModuleCatalog } from '../render/moduleRegistry.js';
 import { listOllamaModels, requestOllamaModuleSuggestion } from '../slm/providers/ollamaProvider.js';
 import { SLM_LANE_IDS, getDefaultSlmModel } from '../slm/slmLanes.js';
 import { validateModuleSuggestion } from '../slm/validators/moduleSuggestionValidator.js';
 import { readProviderSettings } from './providerSettings.js';
 
 const $ = (id) => document.getElementById(id);
+
+let latestValidatedSuggestion = null;
+let previewSuggestionBtn = null;
 
 function setStatus(text, timeout = 3200) {
   const status = $('status-bar');
@@ -60,6 +63,19 @@ function setOutput(text, tone = 'info') {
   output.textContent = text;
 }
 
+function setPreviewSuggestion(suggestion) {
+  latestValidatedSuggestion = suggestion;
+  if (!previewSuggestionBtn) return;
+  previewSuggestionBtn.disabled = !suggestion;
+  previewSuggestionBtn.title = suggestion
+    ? `Preview ${suggestion.moduleName} in sandbox`
+    : 'Ask Local SLM for a validated suggestion first.';
+}
+
+function clearPreviewSuggestion() {
+  setPreviewSuggestion(null);
+}
+
 function getConfiguredLocalSlm() {
   const settings = readProviderSettings();
   if (settings.mode !== 'local-slm') {
@@ -72,8 +88,53 @@ function getConfiguredLocalSlm() {
   };
 }
 
+function activateSandboxUi() {
+  const sandboxToggle = $('sandbox-toggle');
+  if (!sandboxToggle) return;
+  sandboxToggle.checked = true;
+  sandboxToggle.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function previewValidatedSuggestion() {
+  try {
+    if (!latestValidatedSuggestion) {
+      throw new Error('Ask Local SLM for a validated suggestion first.');
+    }
+
+    const moduleDef = getModuleById(latestValidatedSuggestion.moduleId);
+    if (!moduleDef || moduleDef.lane !== RENDER_LANES.CANVAS_2D) {
+      throw new Error('Validated suggestion is not available in the Canvas2D sandbox lane.');
+    }
+
+    const previewBridge = window.GEF_SANDBOX_PREVIEW;
+    if (!previewBridge || typeof previewBridge.previewValidatedModule !== 'function') {
+      throw new Error('Sandbox preview bridge is not ready. Reload the app and try again.');
+    }
+
+    const result = previewBridge.previewValidatedModule(latestValidatedSuggestion);
+    if (!result.ok) {
+      throw new Error(result.error || 'Sandbox preview rejected the validated suggestion.');
+    }
+
+    activateSandboxUi();
+
+    const moduleName = result.module?.name || latestValidatedSuggestion.moduleName || latestValidatedSuggestion.moduleId;
+    const message = `Previewing validated SLM suggestion in sandbox: ${moduleName}.`;
+    logAutopilot('SLM_SUGGESTION_PREVIEWED', message, { suggestion: latestValidatedSuggestion, module: result.module });
+    renderDirectLog('SLM_PREVIEW', message);
+    setOutput(`${message}\n\nPromotion still requires the normal Promote Sandbox action. No generated code was executed.`, 'good');
+  } catch (error) {
+    const message = `SLM preview failed: ${error.message || error}`;
+    logAutopilot('SLM_PREVIEW_ERROR', message);
+    renderDirectLog('SLM_PREVIEW_ERROR', message);
+    setOutput(message, 'warn');
+    setStatus(message, 4200);
+  }
+}
+
 async function testLocalSlm() {
   try {
+    clearPreviewSuggestion();
     const settings = getConfiguredLocalSlm();
     setOutput('Checking local Ollama models...', 'info');
     const models = await listOllamaModels(settings);
@@ -90,6 +151,7 @@ async function testLocalSlm() {
 
 async function suggestModule() {
   try {
+    clearPreviewSuggestion();
     const settings = getConfiguredLocalSlm();
     const userPrompt = $('autopilot-seeds')?.value || $('director-prompt')?.value || '';
     const stage = $('evo-stage')?.value || 'OVERLAY';
@@ -118,10 +180,20 @@ async function suggestModule() {
     }
 
     const suggestion = validation.suggestion;
+    const moduleDef = getModuleById(suggestion.moduleId);
+    const canPreview = moduleDef?.lane === RENDER_LANES.CANVAS_2D;
     const message = `${suggestion.moduleName} (${suggestion.stage}) · confidence ${suggestion.confidence.toFixed(2)} · ${suggestion.reason}`;
     logAutopilot('SLM_SUGGESTION', message, { suggestion });
     renderDirectLog('SLM_SUGGESTION', message);
-    setOutput(`Validated suggestion: ${message}\n\nNo runtime change was applied. Use existing sandbox controls to preview curated modules.`, 'good');
+
+    if (canPreview) {
+      setPreviewSuggestion(suggestion);
+      setOutput(`Validated suggestion: ${message}\n\nUse Preview Suggestion to stage this curated module in the sandbox.`, 'good');
+    } else {
+      clearPreviewSuggestion();
+      setOutput(`Validated suggestion: ${message}\n\nThis module is not available in the current Canvas2D sandbox lane.`, 'warn');
+    }
+
     setStatus('Validated local SLM suggestion received.', 2600);
   } catch (error) {
     const message = `Local SLM suggestion failed: ${error.message || error}`;
@@ -144,8 +216,11 @@ function injectLocalSlmControls() {
   const suggestBtn = createButton('provider-suggest-module-btn', 'Ask Local SLM', 'btn-small btn-good');
   suggestBtn.style.color = '#000';
   suggestBtn.style.background = '#00ff88';
+  previewSuggestionBtn = createButton('provider-preview-suggestion-btn', 'Preview Suggestion', 'btn-small');
+  previewSuggestionBtn.disabled = true;
+  previewSuggestionBtn.title = 'Ask Local SLM for a validated suggestion first.';
 
-  controls.append(testBtn, suggestBtn);
+  controls.append(testBtn, suggestBtn, previewSuggestionBtn);
 
   const output = document.createElement('div');
   output.id = 'local-slm-output';
@@ -155,13 +230,14 @@ function injectLocalSlmControls() {
   output.style.borderRadius = '8px';
   output.style.background = 'rgba(0,0,0,.36)';
   output.style.border = '1px solid rgba(255,255,255,.08)';
-  output.textContent = 'Local SLM lane ready. Use Test Ollama, then Ask Local SLM for a validated curated-module suggestion.';
+  output.textContent = 'Local SLM lane ready. Use Test Ollama, Ask Local SLM, then Preview Suggestion for sandbox-only staging.';
 
   statusEl.insertAdjacentElement('afterend', output);
   statusEl.insertAdjacentElement('afterend', controls);
 
   testBtn.addEventListener('click', testLocalSlm);
   suggestBtn.addEventListener('click', suggestModule);
+  previewSuggestionBtn.addEventListener('click', previewValidatedSuggestion);
 }
 
 if (document.readyState === 'loading') {
