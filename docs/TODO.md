@@ -11,10 +11,10 @@ This file is the human-readable task ledger for GEF.
 
 ## Backlog
 
-- [ ] Expand browser smoke-test notes into an automated Playwright or equivalent browser check when the stack is ready.
 - [ ] Add dataset fixture validation for telemetry JSONL rows.
 - [ ] Add preset fixture validation for import/export compatibility.
 - [ ] Add generated visual code policy regression fixtures.
+- [ ] Expand Playwright coverage beyond the first Chromium boot smoke test.
 
 ## Done
 
@@ -22,3 +22,4 @@ This file is the human-readable task ledger for GEF.
 - [x] Add local SLM lane planning and documentation.
 - [x] Add current `npm run check` script for syntax and security scanning.
 - [x] Add ESLint flat config and wire linting into `npm run check`.
+- [x] Add Playwright Chromium boot smoke harness.
