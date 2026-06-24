@@ -10,7 +10,10 @@
     "check:syntax": "node --check src/app.js && node --check src/audio/analyzer.js && node --check src/render/canvasRuntime.js && node --check src/render/visualModules.js && node --check src/storage/localLibrary.js && node --check src/storage/quarantineReview.js && node --check src/slm/slmLanes.js && node --check src/slm/providers/ollamaProvider.js && node --check src/slm/validators/moduleSuggestionValidator.js && node --check src/slm/validators/generatedVisualCodePolicy.js && node --check src/foundry/promptBuilder.js && node --check src/foundry/localSlmSuggest.js && node --check src/autopilot/autopilotStub.js",
     "check:security": "node tools/security-scan.mjs",
     "lint": "eslint .",
-    "smoke:manual": "echo Open http://localhost:8080 after npm run dev and follow docs/CURRENT_STATUS.md"
+    "smoke:manual": "echo Open http://localhost:8080 after npm run dev and follow docs/CURRENT_STATUS.md",
+    "test:e2e": "playwright test",
+    "test:e2e:chromium": "playwright test --project=chromium",
+    "test:e2e:ui": "playwright test --ui"
   },
   "keywords": [
     "generative-art",
@@ -20,6 +23,7 @@
   ],
   "license": "UNLICENSED",
   "devDependencies": {
+    "@playwright/test": "^1.45.0",
     "eslint": "^9.0.0"
   }
 }
