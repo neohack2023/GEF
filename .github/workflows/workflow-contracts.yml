@@ -1,0 +1,35 @@
+name: Workflow Contracts
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check workflow triggers
+        run: |
+          grep -R "pull_request" .github/workflows
+          grep -R "workflow_dispatch" .github/workflows
+
+      - name: Check CI context artifact
+        run: |
+          grep -R "llm-ci-context" .github/workflows
+          grep -R "upload-artifact" .github/workflows
+          test -f scripts/ci/write-ci-context.mjs
+
+      - name: Check human-gated docs
+        run: |
+          grep -R "human-gated" AGENTS.md docs
+          grep -R "Users promote" AGENTS.md docs
+          grep -R "Do not claim success until CI has passed" AGENTS.md docs
