@@ -17,6 +17,15 @@ Project planning and architecture notes for GEF Sandbox Compiler v2.3.
 
 - [External Feedback Notes](./EXTERNAL_FEEDBACK.md) — early outside feedback on shader tooling, DJ-screen use cases, live visual requirements, and safe positioning before public release.
 
+## Workflow loop
+
+- [Repository Map](./REPO_MAP.md) — repo layout, source areas, docs, and workflow files.
+- [TODO](./TODO.md) — active task ledger and future workflow tasks.
+- [Workflow Loop](./WORKFLOW_LOOP.md) — human-gated LLM/Codex workflow path.
+- [CI to LLM Feedback Loop](./CI_LLM_FEEDBACK_LOOP.md) — how CI packets guide future repair passes.
+- [Human Review Gate](./HUMAN_REVIEW_GATE.md) — canon-sensitive merge and promotion rules.
+- [Rollback Plan](./ROLLBACK_PLAN.md) — minimum rollback notes for meaningful changes.
+
 ## Core docs
 
 - [Architecture](./ARCHITECTURE.md) — render lanes, module registry, sandbox flow, provider boundaries, and future runtime layout.

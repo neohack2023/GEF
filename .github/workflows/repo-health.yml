@@ -1,0 +1,37 @@
+name: Repo Health
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repo-health:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Required workflow files exist
+        run: |
+          test -f README.md
+          test -f AGENTS.md
+          test -f package.json
+          test -f docs/README.md
+          test -f docs/TODO.md
+          test -f docs/REPO_MAP.md
+          test -f docs/WORKFLOW_LOOP.md
+          test -f docs/CI_LLM_FEEDBACK_LOOP.md
+          test -f docs/HUMAN_REVIEW_GATE.md
+          test -f docs/ROLLBACK_PLAN.md
+          test -f .github/PULL_REQUEST_TEMPLATE.md
+          test -f .github/ISSUE_TEMPLATE/llm_task.yml
+          test -f scripts/ci/write-ci-context.mjs
+
+      - name: Prevent empty TODO
+        run: grep -q '[A-Za-z0-9]' docs/TODO.md
