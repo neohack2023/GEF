@@ -1,4 +1,4 @@
-import { visualModules } from './visualModules.js';
+import { visualModules } from './visualModuleFns.js';
 
 export const RENDER_LANES = Object.freeze({
   CANVAS_2D: 'canvas2d',
