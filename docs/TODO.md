@@ -25,3 +25,4 @@ This file is the human-readable task ledger for GEF.
 - [x] Add ESLint flat config and wire linting into `npm run check`.
 - [x] Add initial render module registry scaffold for runtime/provider lookups.
 - [x] Remove duplicated module catalog metadata from `visualModules.js`.
+- [x] Add sandbox-only Preview Suggestion flow for validated Local SLM module choices.
