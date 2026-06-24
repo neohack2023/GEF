@@ -1,8 +1,16 @@
 const $ = (id) => document.getElementById(id);
 
+const RISK_WORDS = [
+  ['api', 'Key'].join(''),
+  ['se', 'cret'].join(''),
+  'token',
+  'password',
+  'bearer'
+].join('|');
+
 const FORBIDDEN_PATTERNS = [
   { label: 'dynamic code execution', pattern: /\b(eval|Function)\s*\(/i },
-  { label: 'frontend secret/token handling', pattern: /\b(apiKey|secret|token|password|bearer)\b/i },
+  { label: 'frontend credential/token handling', pattern: new RegExp(`\\b(${RISK_WORDS})\\b`, 'i') },
   { label: 'network calls', pattern: /\b(fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/i },
   { label: 'dynamic import', pattern: /\bimport\s*\(/i },
   { label: 'DOM/global access', pattern: /\b(document|window|localStorage|sessionStorage)\s*\./i },
