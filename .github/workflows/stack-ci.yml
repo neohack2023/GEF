@@ -30,6 +30,12 @@ jobs:
       - name: Validate package scripts
         run: npm run check --if-present
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Chromium smoke tests
+        run: npm run test:e2e:chromium
+
       - name: Write CI context
         if: always()
         run: node scripts/ci/write-ci-context.mjs "${{ job.status }}"
