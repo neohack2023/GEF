@@ -1,4 +1,4 @@
-import { MODULE_STAGES, getModuleRender, isKnownModuleId } from './moduleRegistry.js';
+import { getModuleRender, isKnownModuleId } from './moduleRegistry.js';
 
 export class CanvasRuntime {
   constructor({ mainCanvas, sandboxCanvas, feedbackCanvas, compositeCanvas }) {
