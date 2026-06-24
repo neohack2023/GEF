@@ -1,4 +1,4 @@
-import { visualModules } from './visualModules.js';
+import { MODULE_STAGES, getModuleRender, isKnownModuleId } from './moduleRegistry.js';
 
 export class CanvasRuntime {
   constructor({ mainCanvas, sandboxCanvas, feedbackCanvas, compositeCanvas }) {
@@ -29,13 +29,13 @@ export class CanvasRuntime {
   }
 
   setBaseModule(moduleId) {
-    if (visualModules[moduleId]) {
+    if (isKnownModuleId(moduleId)) {
       this.baseModuleId = moduleId;
     }
   }
 
   setSandboxModule(moduleId) {
-    this.sandboxModuleId = visualModules[moduleId] ? moduleId : null;
+    this.sandboxModuleId = isKnownModuleId(moduleId) ? moduleId : null;
   }
 
   setSandboxActive(isActive) {
@@ -47,6 +47,7 @@ export class CanvasRuntime {
   }
 
   toggleModule(moduleId, enabled) {
+    if (!isKnownModuleId(moduleId)) return;
     if (enabled) this.enabledModules.add(moduleId);
     else this.enabledModules.delete(moduleId);
   }
@@ -58,12 +59,12 @@ export class CanvasRuntime {
   }
 
   renderMain(w, h, time, audio) {
-    const base = visualModules[this.baseModuleId] || visualModules.voidCore;
+    const base = getModuleRender(this.baseModuleId) || getModuleRender('voidCore');
     base(this.mainCtx, w, h, time, audio, this.mainCanvas);
 
     for (const moduleId of this.enabledModules) {
       if (moduleId === this.baseModuleId) continue;
-      const mod = visualModules[moduleId];
+      const mod = getModuleRender(moduleId);
       if (mod) mod(this.mainCtx, w, h, time, audio, this.mainCanvas);
     }
   }
@@ -72,7 +73,7 @@ export class CanvasRuntime {
     this.sandboxCtx.clearRect(0, 0, w, h);
     if (!this.sandboxActive || !this.sandboxModuleId) return;
 
-    const moduleFn = visualModules[this.sandboxModuleId];
+    const moduleFn = getModuleRender(this.sandboxModuleId);
     if (!moduleFn) return;
 
     const shouldReplace = this.previewMode === 'REPLACE' || (this.previewMode === 'AUTO' && this.sandboxModuleId === 'voidCore');
