@@ -108,7 +108,7 @@ export default [
     rules: baseRules
   },
   {
-    files: ['tools/**/*.mjs', 'scripts/**/*.mjs', '*.config.js'],
+    files: ['tools/**/*.mjs', 'scripts/**/*.mjs', '*.config.js', 'tests/**/*.js'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
