@@ -21,3 +21,4 @@ This file is the human-readable task ledger for GEF.
 - [x] Establish GEF as a browser-first generative visual engine with safety and sandbox boundaries.
 - [x] Add local SLM lane planning and documentation.
 - [x] Add current `npm run check` script for syntax and security scanning.
+- [x] Add ESLint flat config and wire linting into `npm run check`.
