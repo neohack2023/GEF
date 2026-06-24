@@ -1,0 +1,50 @@
+name: LLM Task Packet
+description: Structured task for human-gated LLM/Codex work
+title: "[LLM Task]: "
+labels: ["llm-task", "needs-triage"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should change?
+      placeholder: "Add, fix, document, or verify..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Relevant files, docs, screenshots, prior decisions, or constraints.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: What must be true when this is done?
+      placeholder: |
+        - Build/check passes
+        - Docs updated if needed
+        - Safety boundaries preserved
+        - No architecture drift
+    validations:
+      required: true
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      description: What should not change?
+      placeholder: "Do not rewrite unrelated systems. Keep patch scoped. Preserve GEF safety gates."
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Expected Validation
+      description: Commands or workflows that should pass.
+      placeholder: |
+        npm run check
+        GitHub Actions green
