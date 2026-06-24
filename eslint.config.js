@@ -5,6 +5,7 @@ const browserGlobals = {
   Blob: 'readonly',
   FileReader: 'readonly',
   HTMLAudioElement: 'readonly',
+  HTMLCanvasElement: 'readonly',
   MediaRecorder: 'readonly',
   MediaStream: 'readonly',
   URL: 'readonly',
@@ -113,6 +114,9 @@ export default [
       sourceType: 'module',
       globals: nodeGlobals
     },
-    rules: baseRules
+    rules: {
+      ...baseRules,
+      'no-control-regex': 'off'
+    }
   }
 ];
