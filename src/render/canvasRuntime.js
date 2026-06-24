@@ -1,4 +1,26 @@
-import { visualModules } from './visualModules.js';
+import { MODULE_STAGES, RENDER_LANES, getModuleById, getModuleRender } from './moduleRegistry.js';
+
+function isCanvas2dModule(moduleDef) {
+  return moduleDef?.lane === RENDER_LANES.CANVAS_2D;
+}
+
+function isCanvas2dBaseModule(moduleDef) {
+  return isCanvas2dModule(moduleDef) && moduleDef.stage === MODULE_STAGES.BASE;
+}
+
+function isCanvas2dStackModule(moduleDef) {
+  return isCanvas2dModule(moduleDef) && moduleDef.stage !== MODULE_STAGES.BASE;
+}
+
+function summarizeModule(moduleDef) {
+  if (!moduleDef) return null;
+  return {
+    id: moduleDef.id,
+    name: moduleDef.name,
+    stage: moduleDef.stage,
+    lane: moduleDef.lane
+  };
+}
 
 export class CanvasRuntime {
   constructor({ mainCanvas, sandboxCanvas, feedbackCanvas, compositeCanvas }) {
@@ -17,6 +39,36 @@ export class CanvasRuntime {
     this.sandboxModuleId = null;
     this.sandboxActive = false;
     this.previewMode = 'AUTO';
+
+    this.installSandboxPreviewBridge();
+  }
+
+  installSandboxPreviewBridge() {
+    if (typeof window === 'undefined') return;
+
+    window.GEF_SANDBOX_PREVIEW = Object.freeze({
+      previewValidatedModule: (suggestion) => this.previewValidatedModule(suggestion)
+    });
+  }
+
+  previewValidatedModule(suggestion) {
+    const moduleId = typeof suggestion === 'string' ? suggestion : suggestion?.moduleId;
+    const moduleDef = getModuleById(moduleId);
+
+    if (!isCanvas2dModule(moduleDef)) {
+      return {
+        ok: false,
+        error: 'moduleId must resolve to a curated Canvas2D module.'
+      };
+    }
+
+    this.setSandboxModule(moduleDef.id);
+    this.setSandboxActive(true);
+
+    return {
+      ok: true,
+      module: summarizeModule(moduleDef)
+    };
   }
 
   resize(w, h) {
@@ -29,13 +81,13 @@ export class CanvasRuntime {
   }
 
   setBaseModule(moduleId) {
-    if (visualModules[moduleId]) {
+    if (isCanvas2dBaseModule(getModuleById(moduleId))) {
       this.baseModuleId = moduleId;
     }
   }
 
   setSandboxModule(moduleId) {
-    this.sandboxModuleId = visualModules[moduleId] ? moduleId : null;
+    this.sandboxModuleId = isCanvas2dModule(getModuleById(moduleId)) ? moduleId : null;
   }
 
   setSandboxActive(isActive) {
@@ -47,6 +99,7 @@ export class CanvasRuntime {
   }
 
   toggleModule(moduleId, enabled) {
+    if (!isCanvas2dStackModule(getModuleById(moduleId))) return;
     if (enabled) this.enabledModules.add(moduleId);
     else this.enabledModules.delete(moduleId);
   }
@@ -58,12 +111,14 @@ export class CanvasRuntime {
   }
 
   renderMain(w, h, time, audio) {
-    const base = visualModules[this.baseModuleId] || visualModules.voidCore;
+    const base = getModuleRender(this.baseModuleId) || getModuleRender('voidCore');
     base(this.mainCtx, w, h, time, audio, this.mainCanvas);
 
     for (const moduleId of this.enabledModules) {
       if (moduleId === this.baseModuleId) continue;
-      const mod = visualModules[moduleId];
+      const moduleDef = getModuleById(moduleId);
+      if (!isCanvas2dStackModule(moduleDef)) continue;
+      const mod = getModuleRender(moduleId);
       if (mod) mod(this.mainCtx, w, h, time, audio, this.mainCanvas);
     }
   }
@@ -72,10 +127,13 @@ export class CanvasRuntime {
     this.sandboxCtx.clearRect(0, 0, w, h);
     if (!this.sandboxActive || !this.sandboxModuleId) return;
 
-    const moduleFn = visualModules[this.sandboxModuleId];
+    const moduleDef = getModuleById(this.sandboxModuleId);
+    if (!isCanvas2dModule(moduleDef)) return;
+
+    const moduleFn = getModuleRender(this.sandboxModuleId);
     if (!moduleFn) return;
 
-    const shouldReplace = this.previewMode === 'REPLACE' || (this.previewMode === 'AUTO' && this.sandboxModuleId === 'voidCore');
+    const shouldReplace = this.previewMode === 'REPLACE' || (this.previewMode === 'AUTO' && moduleDef.stage === MODULE_STAGES.BASE);
     this.sandboxCanvas.style.mixBlendMode = shouldReplace ? 'normal' : 'screen';
 
     if (shouldReplace) {

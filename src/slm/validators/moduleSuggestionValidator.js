@@ -1,5 +1,6 @@
+import { MODULE_STAGES, isKnownModuleStage } from '../../render/moduleRegistry.js';
+
 const VALID_SCHEMA_NAME = 'gef-module-suggestion';
-const VALID_STAGES = new Set(['BASE', 'OVERLAY', 'POST_FX', 'FEEDBACK_PASS', 'UI_OVERLAY']);
 
 function clampText(value, maxLength = 420) {
   return String(value || '').trim().slice(0, maxLength);
@@ -32,7 +33,7 @@ export function validateModuleSuggestion(candidate, moduleCatalog) {
   }
 
   const stage = clampText(candidate.stage, 40);
-  if (!VALID_STAGES.has(stage)) {
+  if (!isKnownModuleStage(stage)) {
     errors.push('stage must be a known GEF stage.');
   }
 
@@ -49,7 +50,7 @@ export function validateModuleSuggestion(candidate, moduleCatalog) {
     errors.push('reason is required.');
   }
 
-  if (module && module.stage === 'BASE') {
+  if (module && module.stage === MODULE_STAGES.BASE) {
     diagnostics.push('Base replacement suggestions should remain sandbox-only until user promotion.');
   }
 
