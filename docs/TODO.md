@@ -15,6 +15,7 @@ This file is the human-readable task ledger for GEF.
 - [ ] Add dataset fixture validation for telemetry JSONL rows.
 - [ ] Add preset fixture validation for import/export compatibility.
 - [ ] Add generated visual code policy regression fixtures.
+- [ ] Finish moving remaining UI catalog reads from `visualModules.js` to `moduleRegistry.js`.
 
 ## Done
 
@@ -22,3 +23,4 @@ This file is the human-readable task ledger for GEF.
 - [x] Add local SLM lane planning and documentation.
 - [x] Add current `npm run check` script for syntax and security scanning.
 - [x] Add ESLint flat config and wire linting into `npm run check`.
+- [x] Add initial render module registry scaffold for runtime/provider lookups.
