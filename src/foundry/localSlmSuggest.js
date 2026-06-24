@@ -92,7 +92,7 @@ function activateSandboxUi() {
   const sandboxToggle = $('sandbox-toggle');
   if (!sandboxToggle) return;
   sandboxToggle.checked = true;
-  sandboxToggle.dispatchEvent(new Event('change', { bubbles: true }));
+  sandboxToggle.dispatchEvent(new window.Event('change', { bubbles: true }));
 }
 
 function previewValidatedSuggestion() {
