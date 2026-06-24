@@ -11,11 +11,11 @@ This file is the human-readable task ledger for GEF.
 
 ## Backlog
 
-- [ ] Expand browser smoke-test notes into an automated Playwright or equivalent browser check when the stack is ready.
 - [ ] Add dataset fixture validation for telemetry JSONL rows.
 - [ ] Add preset fixture validation for import/export compatibility.
 - [ ] Add generated visual code policy regression fixtures.
 - [ ] Optionally move legacy UI imports from `visualModules.js` to `moduleRegistry.js` after the compatibility wrapper is no longer useful.
+- [ ] Expand browser smoke coverage beyond Chromium boot and mocked Local SLM preview.
 
 ## Done
 
@@ -27,3 +27,4 @@ This file is the human-readable task ledger for GEF.
 - [x] Remove duplicated module catalog metadata from `visualModules.js`.
 - [x] Add sandbox-only Preview Suggestion flow for validated Local SLM module choices.
 - [x] Add registry smoke checks for metadata, render lookup, and SLM suggestion validation drift.
+- [x] Add Playwright Chromium smoke tests for boot, sandbox panic, and mocked Local SLM Preview Suggestion.
