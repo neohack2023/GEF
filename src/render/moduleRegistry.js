@@ -74,7 +74,7 @@ const CANVAS_2D_MODULES = [
 
 export const moduleRegistry = Object.freeze(CANVAS_2D_MODULES.map((moduleDef) => Object.freeze({ ...moduleDef })));
 
-export const moduleCatalog = Object.freeze(moduleRegistry.map(({ render, ...metadata }) => Object.freeze({ ...metadata })));
+export const moduleCatalog = Object.freeze(moduleRegistry.map(({ render: _render, ...metadata }) => Object.freeze({ ...metadata })));
 
 export const VALID_MODULE_STAGES = Object.freeze(Object.values(MODULE_STAGES));
 export const VALID_RENDER_LANES = Object.freeze(Object.values(RENDER_LANES));
