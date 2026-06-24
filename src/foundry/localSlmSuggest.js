@@ -1,5 +1,5 @@
 import { logAutopilot } from '../autopilot/autopilotStub.js';
-import { moduleCatalog } from '../render/visualModules.js';
+import { getModuleCatalog } from '../render/moduleRegistry.js';
 import { listOllamaModels, requestOllamaModuleSuggestion } from '../slm/providers/ollamaProvider.js';
 import { SLM_LANE_IDS, getDefaultSlmModel } from '../slm/slmLanes.js';
 import { validateModuleSuggestion } from '../slm/validators/moduleSuggestionValidator.js';
@@ -93,6 +93,7 @@ async function suggestModule() {
     const settings = getConfiguredLocalSlm();
     const userPrompt = $('autopilot-seeds')?.value || $('director-prompt')?.value || '';
     const stage = $('evo-stage')?.value || 'OVERLAY';
+    const modules = getModuleCatalog();
 
     if (!userPrompt.trim()) {
       throw new Error('Add a Foundry seed or Mutation Forge prompt first.');
@@ -103,10 +104,10 @@ async function suggestModule() {
       ...settings,
       userPrompt,
       stage,
-      modules: moduleCatalog
+      modules
     });
 
-    const validation = validateModuleSuggestion(result.data, moduleCatalog);
+    const validation = validateModuleSuggestion(result.data, modules);
     if (!validation.ok) {
       const message = `SLM suggestion rejected by validator: ${validation.errors.join(' ')}`;
       logAutopilot('SLM_REJECTED', message, { candidate: result.data });
