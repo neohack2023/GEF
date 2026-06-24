@@ -11,6 +11,7 @@ Project planning and architecture notes for GEF Sandbox Compiler v2.3.
 - [SLM Option Plan](./SLM_OPTION_PLAN.md) — plan for adding browser-local and localhost small language model providers as alternatives to cloud LLM workflows.
 - ✅ [Local Ollama SLM Lane](./LOCAL_OLLAMA_SLM.md) — local SLM integration for validated curated-module suggestions plus the split helper/code lane setup.
 - ✅ [Code Foundry SLM Lane](./CODE_FOUNDRY_SLM.md) — code-focused local SLM lane for generating, linting, repairing, and retrying candidate visual code artifacts under validator and sandbox control.
+- [3D Visualization Lane Plan](./3D_VISUALIZATION_LANE.md) — plan for adding a sandbox-first 3D visual lane alongside the stable Canvas2D renderer.
 - [Feedback and Memory System Plan](./FEEDBACK_MEMORY_SYSTEM.md) — plan for turning user feedback, validation results, telemetry, and local memory into reusable datasets for LLM/SLM improvement.
 
 ## Product signals
