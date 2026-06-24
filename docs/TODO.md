@@ -26,3 +26,4 @@ This file is the human-readable task ledger for GEF.
 - [x] Add initial render module registry scaffold for runtime/provider lookups.
 - [x] Remove duplicated module catalog metadata from `visualModules.js`.
 - [x] Add sandbox-only Preview Suggestion flow for validated Local SLM module choices.
+- [x] Add registry smoke checks for metadata, render lookup, and SLM suggestion validation drift.
