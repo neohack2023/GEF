@@ -15,15 +15,17 @@ users promote what belongs in the renderer.
 
 ## Current implementation
 
-The first Code Foundry implementation is intentionally conservative.
+The first Code Foundry implementation is intentionally conservative about authority but more flexible about visual ideas.
 
 It can:
 
 1. Ask a local Ollama coding model for a structured Canvas2D artifact.
-2. Validate the artifact shape.
-3. Run static generated-code policy checks.
-4. Stage accepted code as **untrusted text** in the manual compiler/code viewer.
-5. Ask the user to run the manual check before any sandbox path.
+2. Invite controlled experimentation: pseudo-3D, gradients, bounded particles, feedback ghosts, beat bloom, glitch geometry, and audio-shaped lattices.
+3. Validate the artifact shape.
+4. Require the artifact to contain functional Canvas2D drawing behavior.
+5. Run static generated-code policy checks.
+6. Stage accepted code as **untrusted text** in the manual compiler/code viewer.
+7. Ask the user to run the manual check before any sandbox path.
 
 It does **not** yet:
 
@@ -54,6 +56,7 @@ It is not a direct runtime authority.
 Good jobs:
 
 - generate a candidate Canvas2D render body
+- experiment inside bounded Canvas2D rules
 - lint a generated visual module against GEF rules
 - repair syntax errors from a failed compile smoke test
 - repair runtime errors from a sandbox smoke test
@@ -131,6 +134,34 @@ A pretty hallucination is still a hallucination wearing stage lights.
 
 ---
 
+## Experiment lane
+
+Code Foundry artifacts may be visually ambitious, but they must stay bounded.
+
+Allowed experimental directions:
+
+- pseudo-3D tunnels, rings, depth grids, or waveform terrain
+- bounded particles or sparks
+- audio-shaped lattices and ribbons
+- gradient fields and radial bloom
+- feedback ghosting through `fbCtx`
+- controlled glitch slices and geometry jitter
+- composite modes that stay inside the current canvas context
+
+Required functional checks:
+
+- code must use `ctx` drawing APIs
+- code should reference `w` or `h` for responsive rendering
+- code should reference `time` or `audio` for motion/reactivity
+- code must include at least one recognizable Canvas2D drawing operation
+- loops must have visible bounds
+- `ctx.save()` and `ctx.restore()` should be balanced
+- artifact should include a fallback plan
+
+The useful target is not “safe and boring.” It is “experimental, bounded, inspectable, and recoverable.”
+
+---
+
 ## Approved render function context
 
 Generated Canvas2D code should only assume access to:
@@ -185,8 +216,11 @@ The Code Foundry lane requests a structured object instead of freeform prose:
   "renderLane": "canvas2d",
   "stage": "OVERLAY",
   "name": "Bass Lattice Bloom",
+  "experimentLevel": "medium",
+  "techniques": ["pseudo-3d", "beat-bloom", "gradient-field"],
   "usedAudioSignals": ["bass", "beat", "glitch", "centroid"],
   "code": "ctx.save();\n...\nctx.restore();",
+  "fallbackPlan": "Reduce to a simple beat-reactive ring field if the experiment is too heavy.",
   "notes": "Beat expands the lattice, centroid shifts hue, glitch slices the frame."
 }
 ```
