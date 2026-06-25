@@ -1,6 +1,6 @@
 # Code Foundry SLM Lane
 
-GEF now has a second local SLM lane for code-shaped work.
+GEF has a local SLM lane for code-shaped work.
 
 This lane is separate from the small local helper model.
 
@@ -9,6 +9,38 @@ llama3.2:3b thinks lightly.
 qwen2.5-coder:3b drafts code artifacts.
 validators decide what survives.
 users promote what belongs in the renderer.
+```
+
+---
+
+## Current implementation
+
+The first Code Foundry implementation is intentionally conservative.
+
+It can:
+
+1. Ask a local Ollama coding model for a structured Canvas2D artifact.
+2. Validate the artifact shape.
+3. Run static generated-code policy checks.
+4. Stage accepted code as **untrusted text** in the manual compiler/code viewer.
+5. Ask the user to run the manual check before any sandbox path.
+
+It does **not** yet:
+
+- execute generated code
+- compile generated code
+- auto-preview generated code in sandbox
+- promote generated code to main runtime
+- write generated code into curated module files
+
+Implementation files:
+
+```text
+src/slm/providers/ollamaProvider.js
+src/slm/validators/generatedVisualCodePolicy.js
+src/slm/validators/generatedVisualArtifactValidator.js
+src/foundry/localSlmSuggest.js
+tools/code-foundry-smoke.mjs
 ```
 
 ---
@@ -78,7 +110,7 @@ src/slm/slmLanes.js
 
 ## Required pipeline
 
-The Code Foundry lane must use this path:
+The full Code Foundry lane must use this path:
 
 ```text
 prompt
@@ -90,6 +122,8 @@ prompt
 -> sandbox_preview
 -> user_promotion
 ```
+
+The current implementation stops after `validate_static_policy` and stages the code as manual compiler text.
 
 The app should never treat a generated module as trusted just because a model wrote it cleanly.
 
@@ -117,12 +151,13 @@ The generated artifact should be a render-function body only. It should not impo
 
 ## Static policy screen
 
-Generated code should pass the static policy validator before compile/runtime smoke tests.
+Generated code must pass the static policy validator before compile/runtime smoke tests.
 
-Validator file:
+Validator files:
 
 ```text
 src/slm/validators/generatedVisualCodePolicy.js
+src/slm/validators/generatedVisualArtifactValidator.js
 ```
 
 Blocked patterns include:
@@ -137,9 +172,9 @@ This is not a complete security system by itself. It is the first fence before d
 
 ---
 
-## Suggested artifact shape
+## Artifact shape
 
-When the Code Foundry lane is wired into Foundry, prefer a structured object instead of freeform prose:
+The Code Foundry lane requests a structured object instead of freeform prose:
 
 ```json
 {
@@ -147,15 +182,16 @@ When the Code Foundry lane is wired into Foundry, prefer a structured object ins
   "schemaVersion": 1,
   "lane": "codeFoundry",
   "runtime": "canvas2d",
+  "renderLane": "canvas2d",
   "stage": "OVERLAY",
   "name": "Bass Lattice Bloom",
   "usedAudioSignals": ["bass", "beat", "glitch", "centroid"],
-  "code": "// NAME: Bass Lattice Bloom\nctx.save();\n...\nctx.restore();",
+  "code": "ctx.save();\n...\nctx.restore();",
   "notes": "Beat expands the lattice, centroid shifts hue, glitch slices the frame."
 }
 ```
 
-Only the validated `code` field should move toward sandbox preview.
+Only a validated `code` field may move toward later compile smoke and sandbox preview work.
 
 ---
 
