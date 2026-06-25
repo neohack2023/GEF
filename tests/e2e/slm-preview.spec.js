@@ -19,7 +19,7 @@ function watchForBrowserErrors(page) {
   return { pageErrors, consoleErrors };
 }
 
-test('validated Local SLM suggestion can be previewed in sandbox only', async ({ page }) => {
+test('validated Local SLM suggestion can use local defaults and preview in sandbox only', async ({ page }) => {
   const browserErrors = watchForBrowserErrors(page);
   let generateRequestSeen = false;
 
@@ -61,9 +61,9 @@ test('validated Local SLM suggestion can be previewed in sandbox only', async ({
   await page.locator('#autopilot-seeds').fill('Build a sharp audio-reactive grid that rides the beat without changing main runtime.');
 
   await page.locator('#provider-mode').selectOption('local-slm');
-  await page.locator('#provider-endpoint').fill('http://localhost:11434');
-  await page.locator('#provider-model').fill('llama3.2:3b');
-  await page.locator('#provider-save-btn').click();
+  await expect(page.locator('#provider-endpoint')).toHaveValue('http://localhost:11434');
+  await expect(page.locator('#provider-model')).toHaveValue('llama3.2:3b');
+  await expect(page.locator('#provider-credential-ref')).toHaveValue('local-only');
 
   const previewButton = page.locator('#provider-preview-suggestion-btn');
   await expect(previewButton).toBeDisabled();
