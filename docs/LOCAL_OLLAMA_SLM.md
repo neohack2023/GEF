@@ -8,7 +8,7 @@ This is intentionally split into jobs.
 Local SLM suggests. GEF validates. User promotes.
 ```
 
-The first implemented lane does not generate runtime code and does not change the renderer directly.
+The local model lanes are setup-checked from npm so Windows Command Prompt, PowerShell, and CI all follow the same wiring.
 
 ---
 
@@ -20,21 +20,68 @@ Current implementation:
 - `src/slm/slmLanes.js`
 - `src/slm/validators/moduleSuggestionValidator.js`
 - `src/slm/validators/generatedVisualCodePolicy.js`
+- `src/slm/validators/generatedVisualArtifactValidator.js`
 - `src/foundry/promptBuilder.js`
 - `src/foundry/localSlmSuggest.js`
+- `scripts/setup/slm-setup.mjs`
 
 The Foundry panel has an editable prompt window. The Prompt Builder adds controls around that window, but the textarea stays the source of truth.
 
-The Foundry Provider Access panel gains two local SLM controls at runtime:
+The Foundry Provider Access panel gains local SLM controls at runtime:
 
 - **Test Ollama**
 - **Ask Local SLM**
+- **Preview Suggestion**
+- **Ask Code SLM**
+
+---
+
+## Command Prompt setup menu
+
+After installing npm dependencies, run:
+
+```bash
+npm run setup:slm
+```
+
+The menu checks:
+
+- whether the `ollama` command is available
+- whether the local Ollama service responds
+- which GEF SLM models are already installed
+- which required models are missing
+- which optional heavier repair model is missing
+
+If Ollama is not installed, the menu prints and can open:
+
+```text
+https://ollama.com/download
+```
+
+If Ollama is installed but the local service is not responding, the Windows menu can open a new Command Prompt running:
+
+```bash
+ollama serve
+```
+
+If models are missing, the menu can pull them with:
+
+```bash
+ollama pull llama3.2:3b
+ollama pull qwen2.5-coder:3b
+```
+
+Optional heavier repair model:
+
+```bash
+ollama pull qwen2.5-coder:7b
+```
 
 ---
 
 ## Local model lanes
 
-GEF now defines two active local Ollama lanes:
+GEF defines two required local Ollama lanes:
 
 | Lane | Model | Job |
 | --- | --- | --- |
@@ -68,11 +115,11 @@ It adds:
 
 Every control appends normal editable text into the Foundry prompt window.
 
-The user can still edit, remove, rewrite, or reorder anything before pressing **Ask Local SLM**.
+The user can still edit, remove, rewrite, or reorder anything before pressing **Ask Local SLM** or **Ask Code SLM**.
 
 ---
 
-## Recommended local setup
+## Manual setup fallback
 
 Use Ollama locally:
 
@@ -98,7 +145,7 @@ Optional heavier repair model:
 ollama pull qwen2.5-coder:7b
 ```
 
-Recommended GEF settings for the current curated-module suggestion lane:
+Recommended GEF settings for curated-module suggestions:
 
 ```text
 Provider mode: Local SLM Endpoint
@@ -107,7 +154,7 @@ Model: llama3.2:3b
 Credential reference: local-only
 ```
 
-When the Code Foundry lane is wired into the UI, use:
+Recommended GEF settings for Code Foundry:
 
 ```text
 Provider mode: Local SLM Endpoint
@@ -120,9 +167,9 @@ No provider credentials belong in the frontend.
 
 ---
 
-## Current task: curated module suggestion
+## Curated module suggestion task
 
-The current local SLM receives:
+The local SLM receives:
 
 - the final editable Foundry prompt text
 - selected stage
@@ -157,40 +204,41 @@ If validation passes, the suggestion is displayed and logged. It does not apply 
 
 ---
 
-## Future task: candidate visual code artifact
+## Code Foundry task
 
-The Code Foundry lane may draft candidate Canvas2D visual code after the validator and sandbox path is wired.
+The Code Foundry lane drafts candidate Canvas2D visual code artifacts and stages accepted output as untrusted manual compiler text.
 
 It must not directly alter the main runtime.
 
 Required path:
 
 ```text
-prompt -> qwen2.5-coder:3b -> static policy -> compile smoke test -> runtime smoke test -> repair retry -> sandbox preview -> user promotion
+prompt -> qwen2.5-coder:3b -> structured artifact -> static policy -> manual compiler text -> later compile smoke -> later runtime smoke -> later sandbox preview -> user promotion
 ```
 
 The static policy screen lives in:
 
 ```text
 src/slm/validators/generatedVisualCodePolicy.js
+src/slm/validators/generatedVisualArtifactValidator.js
 ```
 
-Do not confuse this lane with the current curated-module suggestion button. The suggestion button chooses from existing modules. Code Foundry drafts code artifacts for a later sandbox-only flow.
+Do not confuse this lane with the curated-module suggestion button. The suggestion button chooses from existing modules. Code Foundry drafts candidate code artifacts for a validator-gated path.
 
 ---
 
 ## Why the current lane is safe enough for first AI re-entry
 
-The currently wired lane only lets the model choose from existing curated modules.
+The currently wired lanes still do not let the model promote or silently execute generated code.
 
-It does not:
+They do not:
 
-- execute generated code
 - import generated modules
 - alter the main runtime
 - promote sandbox output
 - store provider credentials
 - make dataset rows training-ready
+- execute imported memory, presets, JSONL, or provider output
 
 The model is a navigator with a paper map, not a mechanic with a wrench.
 
@@ -202,11 +250,13 @@ Browser-to-localhost requests may be affected by browser policy, hosting origin,
 
 If **Test Ollama** fails:
 
-1. Confirm Ollama is running.
-2. Confirm `http://localhost:11434` responds locally.
-3. Confirm the model is pulled.
-4. Try the local dev server instead of a hosted static page.
-5. If needed later, use a small local proxy adapter.
+1. Run `npm run setup:slm`.
+2. Confirm Ollama is installed.
+3. Confirm `ollama serve` is running.
+4. Confirm `http://localhost:11434` responds locally.
+5. Confirm the model is pulled.
+6. Try the local dev server instead of a hosted static page.
+7. If needed later, use a small local proxy adapter.
 
 ---
 
@@ -214,12 +264,7 @@ If **Test Ollama** fails:
 
 Good next steps:
 
-1. Add a validated **Preview Suggested Module** button.
-2. Add an SLM request/response telemetry row type.
-3. Add JSON schema files under `src/slm/schemas/`.
-4. Add timeout/abort UI state for long local model calls.
-5. Add a local proxy fallback if direct browser-to-Ollama fetch is blocked.
-6. Add prompt-builder presets for common visual directions.
-7. Wire Code Foundry into a sandbox-only generated-artifact flow.
-
-Do not add generated visual code execution without the full static policy, smoke test, repair loop, sandbox preview, and user-promotion path.
+1. Add SLM request/response telemetry row types.
+2. Add JSON schema files under `src/slm/schemas/`.
+3. Add timeout/abort UI state for long local model calls.
+4. Add compile-smoke validation for generated Code Foundry artifacts.

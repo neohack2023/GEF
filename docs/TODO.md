@@ -32,3 +32,4 @@ This file is the human-readable task ledger for GEF.
 - [x] Add Vite-hosted npm local dev flow and TypeScript project configuration.
 - [x] Add Playwright Chromium smoke tests for boot, sandbox panic, and mocked Local SLM Preview Suggestion.
 - [x] Add Code Foundry local SLM lane for validator-screened Canvas2D artifact generation.
+- [x] Add npm-driven local SLM setup menu for Ollama/model checks.
