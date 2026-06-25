@@ -34,6 +34,16 @@ The Foundry Provider Access panel gains local SLM controls at runtime:
 - **Preview Suggestion**
 - **Ask Code SLM**
 
+When Provider Access is set to **Local SLM Endpoint**, GEF auto-fills local defaults:
+
+```text
+Endpoint: http://localhost:11434
+Model: llama3.2:3b
+Credential reference: local-only
+```
+
+The endpoint is still used internally because the browser talks to the local Ollama service over localhost. The user should not need to manually type it for the normal laptop-local setup.
+
 ---
 
 ## Command Prompt setup menu
@@ -145,7 +155,7 @@ Optional heavier repair model:
 ollama pull qwen2.5-coder:7b
 ```
 
-Recommended GEF settings for curated-module suggestions:
+Recommended GEF settings for curated-module suggestions are normally automatic after selecting Local SLM Endpoint:
 
 ```text
 Provider mode: Local SLM Endpoint
