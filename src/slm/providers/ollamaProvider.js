@@ -26,11 +26,17 @@ export const generatedVisualArtifactSchema = {
     renderLane: { type: 'string' },
     stage: { type: 'string' },
     name: { type: 'string' },
+    experimentLevel: { type: 'string' },
+    techniques: {
+      type: 'array',
+      items: { type: 'string' }
+    },
     usedAudioSignals: {
       type: 'array',
       items: { type: 'string' }
     },
     code: { type: 'string' },
+    fallbackPlan: { type: 'string' },
     notes: { type: 'string' }
   }
 };
@@ -170,18 +176,29 @@ export function buildModuleSuggestionPrompt({ userPrompt, stage, modules }) {
 export function buildGeneratedVisualArtifactPrompt({ userPrompt, stage, diagnostics = '', priorCode = '' }) {
   return [
     'You are the Code Foundry local coding SLM inside GEF, an audio-reactive visual engine.',
-    'Your job is to draft one Canvas2D render-function body as a structured JSON artifact.',
+    'Your job is to draft one experimental but functional Canvas2D render-function body as a structured JSON artifact.',
     '',
     'Core rule: Models may suggest. Validators decide. Users promote.',
     '',
-    'Safety rules:',
+    'Creative permission:',
+    '- You may experiment with pseudo-3D perspective, tunnels, waveform terrain, bounded particle fields, recursive-feeling rings, gradients, blend modes, feedback ghosting through fbCtx, camera drift, glitch geometry, and audio-shaped lattices.',
+    '- Prefer a memorable visual idea over a bland safe demo.',
+    '- Use experimentLevel "medium" by default. Use "wild" only when the prompt clearly asks for chaos or mutation.',
+    '- Add techniques that honestly describe the experiment, such as "pseudo-3d", "bounded-particles", "feedback-ghosting", "gradient-field", "beat-bloom", or "glitch-slices".',
+    '',
+    'Functional requirements:',
     '- Return JSON only. No markdown. No prose outside JSON.',
-    '- Do not use fetch, XMLHttpRequest, WebSocket, localStorage, sessionStorage, indexedDB, document, window, navigator, location, eval, Function, import, workers, postMessage, cookies, script tags, or DOM mutation.',
-    '- Do not include a full function declaration, imports, exports, markdown fences, HTML, or external assets.',
     '- Draft only the body of a render function that receives ctx, w, h, time, audio, fbCtx, and Math.',
-    '- Use only Canvas2D drawing calls on ctx and safe math.',
+    '- The code must draw with ctx and should reference canvas size w/h plus time or audio.',
+    '- Include at least one visible drawing operation such as fillRect, stroke, fill, arc, lineTo, drawImage, fillText, strokeText, or gradient/color drawing.',
+    '- Keep loops bounded. Target fewer than 160 total draw iterations unless the math clearly limits the work.',
+    '- Restore canvas state when using ctx.save().',
+    '- Include fallbackPlan describing the simple visual fallback if the experiment is too heavy or rejected.',
+    '',
+    'Safety rules:',
+    '- Do not use fetch, XMLHttpRequest, WebSocket, localStorage, sessionStorage, indexedDB, document, window, navigator, location, eval, Function, import, workers, postMessage, cookies, script tags, or DOM mutation.',
+    '- Do not include imports, exports, markdown fences, HTML, or external assets.',
     '- Treat audio as an object with bass, mid, treble, beat, glitch, centroid, and rms values from 0 to 1.',
-    '- Keep loops bounded and readable. Prefer deterministic drawing over random unless it is controlled by time/audio.',
     '- The generated artifact is untrusted text. It will be validated before sandbox preview.',
     '',
     `Requested stage: ${stage || 'OVERLAY'}`,
@@ -196,7 +213,7 @@ export function buildGeneratedVisualArtifactPrompt({ userPrompt, stage, diagnost
     String(priorCode || '').trim() || '(none)',
     '',
     'Return exactly this JSON shape:',
-    '{"schemaName":"gef-generated-visual-artifact","schemaVersion":1,"lane":"codeFoundry","runtime":"canvas2d","renderLane":"canvas2d","stage":"OVERLAY","name":"Short visual name","usedAudioSignals":["bass","beat"],"code":"ctx.save();\\n// render body only\\nctx.restore();","notes":"short validator-facing note"}'
+    '{"schemaName":"gef-generated-visual-artifact","schemaVersion":1,"lane":"codeFoundry","runtime":"canvas2d","renderLane":"canvas2d","stage":"OVERLAY","name":"Short visual name","experimentLevel":"medium","techniques":["pseudo-3d","beat-bloom"],"usedAudioSignals":["bass","beat"],"code":"ctx.save();\\n// experimental render body only\\nctx.restore();","fallbackPlan":"Reduce to a simple beat-reactive ring field.","notes":"short validator-facing note"}'
   ].join('\n');
 }
 
@@ -212,7 +229,7 @@ export async function requestOllamaGeneratedVisualArtifact({ endpoint, model, us
     model,
     prompt,
     schema: generatedVisualArtifactSchema,
-    temperature: 0.08,
-    maxTokens: 900
+    temperature: 0.18,
+    maxTokens: 1300
   });
 }
