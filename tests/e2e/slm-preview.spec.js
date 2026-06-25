@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
 
+const OLLAMA_MOCK_HEADERS = {
+  'access-control-allow-origin': 'http://127.0.0.1:4173',
+  'access-control-allow-methods': 'POST, OPTIONS',
+  'access-control-allow-headers': 'content-type',
+  'access-control-max-age': '600'
+};
+
 function watchForBrowserErrors(page) {
   const pageErrors = [];
   const consoleErrors = [];
@@ -17,10 +24,21 @@ test('validated Local SLM suggestion can be previewed in sandbox only', async ({
   let generateRequestSeen = false;
 
   await page.route('http://localhost:11434/api/generate', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({
+        status: 204,
+        headers: OLLAMA_MOCK_HEADERS
+      });
+      return;
+    }
+
     generateRequestSeen = true;
     await route.fulfill({
       status: 200,
-      contentType: 'application/json',
+      headers: {
+        ...OLLAMA_MOCK_HEADERS,
+        'content-type': 'application/json'
+      },
       body: JSON.stringify({
         model: 'llama3.2:3b',
         response: JSON.stringify({
