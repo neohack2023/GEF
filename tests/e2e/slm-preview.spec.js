@@ -59,14 +59,17 @@ test('validated Local SLM suggestion can be previewed in sandbox only', async ({
 
   await previewButton.click();
 
+  await expect(page.locator('#local-slm-output')).toContainText('Promotion still requires the normal Promote Sandbox action.');
+  await expect(page.locator('#local-slm-output')).toContainText('No generated code was executed.');
+
+  await page.locator('#tab-studio').click();
+  await expect(page.locator('#view-studio')).toHaveClass(/active/);
   await expect(page.locator('#sandbox-toggle')).toBeChecked();
   await expect(page.locator('#status-bar')).toContainText('SANDBOX RUNTIME ACTIVE');
   await expect(page.locator('#promote-sandbox-btn')).toBeVisible();
   await expect(page.locator('#discard-sandbox-btn')).toBeVisible();
   await expect(page.locator('#module-stack-container')).toContainText('SANDBOX');
   await expect(page.locator('#module-stack-container')).toContainText('Spectral Grid');
-  await expect(page.locator('#local-slm-output')).toContainText('Promotion still requires the normal Promote Sandbox action.');
-  await expect(page.locator('#local-slm-output')).toContainText('No generated code was executed.');
 
   expect(browserErrors.pageErrors).toEqual([]);
   expect(browserErrors.consoleErrors).toEqual([]);
