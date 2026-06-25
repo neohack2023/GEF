@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const OLLAMA_MOCK_HEADERS = {
   'access-control-allow-origin': 'http://127.0.0.1:4173',
-  'access-control-allow-methods': 'POST, OPTIONS',
+  'access-control-allow-methods': 'GET, POST, OPTIONS',
   'access-control-allow-headers': 'content-type',
   'access-control-max-age': '600'
 };
@@ -19,9 +19,27 @@ function watchForBrowserErrors(page) {
   return { pageErrors, consoleErrors };
 }
 
-test('validated Local SLM suggestion can be previewed in sandbox only', async ({ page }) => {
+test('validated Local SLM suggestion can use local defaults and preview in sandbox only', async ({ page }) => {
   const browserErrors = watchForBrowserErrors(page);
   let generateRequestSeen = false;
+  let tagsRequestSeen = false;
+
+  await page.route('http://localhost:11434/api/tags', async (route) => {
+    tagsRequestSeen = true;
+    await route.fulfill({
+      status: 200,
+      headers: {
+        ...OLLAMA_MOCK_HEADERS,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        models: [
+          { name: 'llama3.2:3b' },
+          { name: 'qwen2.5-coder:3b' }
+        ]
+      })
+    });
+  });
 
   await page.route('http://localhost:11434/api/generate', async (route) => {
     if (route.request().method() === 'OPTIONS') {
@@ -61,9 +79,22 @@ test('validated Local SLM suggestion can be previewed in sandbox only', async ({
   await page.locator('#autopilot-seeds').fill('Build a sharp audio-reactive grid that rides the beat without changing main runtime.');
 
   await page.locator('#provider-mode').selectOption('local-slm');
-  await page.locator('#provider-endpoint').fill('http://localhost:11434');
-  await page.locator('#provider-model').fill('llama3.2:3b');
-  await page.locator('#provider-save-btn').click();
+  await expect(page.locator('#provider-endpoint')).toHaveValue('http://localhost:11434');
+  await expect(page.locator('#provider-model')).toHaveValue('llama3.2:3b');
+  await expect(page.locator('#provider-credential-ref')).toHaveValue('local-only');
+
+  const modelStatus = page.locator('#local-slm-model-status');
+  await expect(modelStatus).toContainText('llama3.2:3b');
+  await expect(modelStatus).toContainText('qwen2.5-coder:3b');
+  await expect(modelStatus).toContainText('qwen2.5-coder:7b');
+  await expect(modelStatus).toContainText('Light helper');
+  await expect(modelStatus).toContainText('Code Foundry');
+  await expect(modelStatus).toContainText('Heavier code repair');
+
+  await page.locator('#provider-test-ollama-btn').click();
+  await expect(modelStatus).toContainText('Ollama reachable');
+  await expect(modelStatus).toContainText('missing optional');
+  expect(tagsRequestSeen).toBe(true);
 
   const previewButton = page.locator('#provider-preview-suggestion-btn');
   await expect(previewButton).toBeDisabled();

@@ -5,10 +5,10 @@ import {
   requestOllamaGeneratedVisualArtifact,
   requestOllamaModuleSuggestion
 } from '../slm/providers/ollamaProvider.js';
-import { SLM_LANE_IDS, getDefaultSlmModel } from '../slm/slmLanes.js';
+import { DEFAULT_LOCAL_SLM_ENDPOINT, SLM_LANES, SLM_LANE_IDS, getDefaultSlmModel } from '../slm/slmLanes.js';
 import { validateGeneratedVisualArtifact } from '../slm/validators/generatedVisualArtifactValidator.js';
 import { validateModuleSuggestion } from '../slm/validators/moduleSuggestionValidator.js';
-import { readProviderSettings } from './providerSettings.js';
+import { readProviderSettings, readSettingsFromForm } from './providerSettings.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -16,6 +16,13 @@ let latestValidatedSuggestion = null;
 let latestGeneratedArtifact = null;
 let previewSuggestionBtn = null;
 let codeFoundryBtn = null;
+let modelStatusEl = null;
+
+const MODEL_PURPOSES = Object.freeze({
+  [SLM_LANE_IDS.LIGHT_HELPER]: 'Prompt routing, feedback summaries, and curated-module suggestions.',
+  [SLM_LANE_IDS.CODE_FOUNDRY]: 'Code Foundry drafting for validator-screened Canvas2D artifacts.',
+  [SLM_LANE_IDS.HEAVIER_CODE_REPAIR]: 'Optional deeper repair lane for heavier local code experiments.'
+});
 
 function setStatus(text, timeout = 3200) {
   const status = $('status-bar');
@@ -103,14 +110,103 @@ function clearPreviewSuggestion() {
   setPreviewSuggestion(null);
 }
 
+function getModelLaneRows(installedNames = null) {
+  const installed = installedNames ? new Set(installedNames) : null;
+  return [SLM_LANE_IDS.LIGHT_HELPER, SLM_LANE_IDS.CODE_FOUNDRY, SLM_LANE_IDS.HEAVIER_CODE_REPAIR]
+    .map((laneId) => {
+      const lane = SLM_LANES[laneId];
+      const isInstalled = installed ? installed.has(lane.model) : null;
+      return {
+        laneId,
+        label: lane.label,
+        model: lane.model,
+        optional: Boolean(lane.optional),
+        installed: isInstalled,
+        purpose: MODEL_PURPOSES[laneId]
+      };
+    });
+}
+
+function modelStatusLabel(row) {
+  if (row.installed === true) return 'installed';
+  if (row.installed === false && row.optional) return 'missing optional';
+  if (row.installed === false) return 'missing required';
+  return row.optional ? 'optional' : 'required';
+}
+
+function renderModelInventory(installedNames = null, message = 'Click Test Ollama to check which local models are installed.') {
+  if (!modelStatusEl) return;
+
+  modelStatusEl.replaceChildren();
+
+  const title = document.createElement('div');
+  title.style.fontWeight = '700';
+  title.style.color = '#00ff88';
+  title.style.marginBottom = '4px';
+  title.textContent = 'Local SLM models';
+
+  const note = document.createElement('div');
+  note.className = 'tiny-note';
+  note.style.marginBottom = '8px';
+  note.textContent = message;
+
+  const list = document.createElement('div');
+  list.style.display = 'grid';
+  list.style.gap = '6px';
+
+  for (const row of getModelLaneRows(installedNames)) {
+    const item = document.createElement('div');
+    item.style.padding = '6px';
+    item.style.border = '1px solid rgba(255,255,255,.08)';
+    item.style.borderRadius = '8px';
+    item.style.background = 'rgba(255,255,255,.035)';
+
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.flexWrap = 'wrap';
+    header.style.gap = '6px';
+    header.style.alignItems = 'center';
+
+    const model = document.createElement('strong');
+    model.textContent = row.model;
+
+    const status = document.createElement('span');
+    status.style.fontSize = '0.65rem';
+    status.style.padding = '2px 6px';
+    status.style.borderRadius = '999px';
+    status.style.border = '1px solid rgba(255,255,255,.14)';
+    status.textContent = modelStatusLabel(row);
+
+    const label = document.createElement('span');
+    label.style.color = '#9be7ff';
+    label.textContent = row.label;
+
+    const purpose = document.createElement('div');
+    purpose.className = 'tiny-note';
+    purpose.style.marginTop = '4px';
+    purpose.textContent = row.purpose;
+
+    header.append(model, status, label);
+    item.append(header, purpose);
+    list.append(item);
+  }
+
+  modelStatusEl.append(title, note, list);
+}
+
+function readLiveProviderSettings() {
+  return $('provider-mode') ? readSettingsFromForm() : readProviderSettings();
+}
+
 function getConfiguredLocalSlm(defaultLane = SLM_LANE_IDS.LIGHT_HELPER) {
-  const settings = readProviderSettings();
-  if (settings.mode !== 'local-slm') {
-    throw new Error('Switch Provider Access to Local SLM Endpoint first.');
+  const settings = readLiveProviderSettings();
+  const mode = settings.mode || $('provider-mode')?.value;
+  if (mode !== 'local-slm') {
+    throw new Error('Choose Local SLM Endpoint in Provider Access first.');
   }
 
   return {
-    endpoint: settings.endpoint || 'http://localhost:11434',
+    endpoint: settings.endpoint || DEFAULT_LOCAL_SLM_ENDPOINT,
     model: settings.model || getDefaultSlmModel(defaultLane)
   };
 }
@@ -216,13 +312,16 @@ async function testLocalSlm() {
     clearPreviewSuggestion();
     const settings = getConfiguredLocalSlm(SLM_LANE_IDS.LIGHT_HELPER);
     setOutput('Checking local Ollama models...', 'info');
+    renderModelInventory(null, 'Checking the local Ollama model list...');
     const models = await listOllamaModels(settings);
     const names = models.map((model) => model.name || model.model).filter(Boolean);
     const modelText = names.length ? names.slice(0, 6).join(', ') : 'no local models returned';
+    renderModelInventory(names, `Ollama reachable. Installed models returned: ${modelText}`);
     setOutput(`Ollama reachable. Local models: ${modelText}`, 'good');
     setStatus('Local SLM reachable.', 2200);
   } catch (error) {
     const message = `Local SLM check failed: ${error.message || error}`;
+    renderModelInventory([], message);
     setOutput(message, 'warn');
     setStatus(message, 5000);
   }
@@ -370,10 +469,25 @@ function injectLocalSlmControls() {
   output.style.borderRadius = '8px';
   output.style.background = 'rgba(0,0,0,.36)';
   output.style.border = '1px solid rgba(255,255,255,.08)';
-  output.textContent = 'Local SLM lane ready. Use Ask Local SLM for curated-module suggestions or Ask Code SLM for untrusted Code Foundry artifacts.';
+  output.textContent = 'Local SLM lane ready. Choose Local SLM Endpoint to use local defaults. Use Ask Local SLM for curated-module suggestions or Ask Code SLM for untrusted Code Foundry artifacts.';
 
+  modelStatusEl = document.createElement('div');
+  modelStatusEl.id = 'local-slm-model-status';
+  modelStatusEl.style.marginTop = '8px';
+  modelStatusEl.style.padding = '8px';
+  modelStatusEl.style.borderRadius = '8px';
+  modelStatusEl.style.background = 'rgba(0,0,0,.28)';
+  modelStatusEl.style.border = '1px solid rgba(0,255,136,.18)';
+
+  statusEl.insertAdjacentElement('afterend', modelStatusEl);
   statusEl.insertAdjacentElement('afterend', output);
   statusEl.insertAdjacentElement('afterend', controls);
+
+  renderModelInventory();
+
+  $('provider-mode')?.addEventListener('change', () => {
+    renderModelInventory(null, 'Click Test Ollama to check installed local models for this provider mode.');
+  });
 
   testBtn.addEventListener('click', testLocalSlm);
   suggestBtn.addEventListener('click', suggestModule);
