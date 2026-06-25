@@ -33,6 +33,14 @@ The Foundry Provider Access panel gains local SLM controls at runtime:
 - **Ask Local SLM**
 - **Preview Suggestion**
 - **Ask Code SLM**
+- **Local SLM models** inventory panel
+
+The inventory panel shows:
+
+- each GEF model lane
+- model name
+- installed, required, missing required, optional, or missing optional state
+- what the model does inside GEF
 
 When Provider Access is set to **Local SLM Endpoint**, GEF auto-fills local defaults:
 
