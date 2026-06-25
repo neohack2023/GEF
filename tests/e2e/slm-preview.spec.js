@@ -92,7 +92,7 @@ test('validated Local SLM suggestion can use local defaults and preview in sandb
   await expect(modelStatus).toContainText('Heavier code repair');
 
   await page.locator('#provider-test-ollama-btn').click();
-  await expect(modelStatus).toContainText('installed');
+  await expect(modelStatus).toContainText('Ollama reachable');
   await expect(modelStatus).toContainText('missing optional');
   expect(tagsRequestSeen).toBe(true);
 
