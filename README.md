@@ -4,6 +4,31 @@ GEF is a browser-based generative visual engine for building audio-reactive art 
 
 It is designed as a creative sandbox where visual modules, audio analysis, feedback, presets, and future AI/SLM assistance can work together without letting untrusted generated code take over the renderer.
 
+## Quick start
+
+Install dependencies and run the local Vite dev server:
+
+```bash
+npm install
+npm run dev
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8080
+```
+
+Do not open `index.html` directly with `file://`. GEF uses browser ES modules, so direct file loading gives the page a `null` origin and modern browsers block module imports. Always use the npm-hosted local server.
+
+Useful scripts:
+
+```bash
+npm run check
+npm run build
+npm run test:e2e:chromium
+```
+
 ## What the app is for
 
 GEF is meant for experimenting with live generative visuals:
@@ -47,6 +72,9 @@ The current browser prototype includes:
 - local Ollama SLM suggestions for curated modules
 - split local SLM lane profiles for light helper and code foundry tasks
 - static policy screening for generated visual code artifacts
+- Vite-hosted local development and build preview
+- TypeScript project configuration for gradual type adoption
+- Playwright Chromium smoke coverage for boot, sandbox recovery, and mocked Local SLM preview
 - snapshot and WebM capture paths
 - documentation for architecture, safety, memory, datasets, presets, and testing
 
