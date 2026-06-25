@@ -15,6 +15,26 @@ export const moduleSuggestionSchema = {
   }
 };
 
+export const generatedVisualArtifactSchema = {
+  type: 'object',
+  required: ['schemaName', 'schemaVersion', 'lane', 'runtime', 'stage', 'name', 'usedAudioSignals', 'code', 'notes'],
+  properties: {
+    schemaName: { type: 'string' },
+    schemaVersion: { type: 'integer' },
+    lane: { type: 'string' },
+    runtime: { type: 'string' },
+    renderLane: { type: 'string' },
+    stage: { type: 'string' },
+    name: { type: 'string' },
+    usedAudioSignals: {
+      type: 'array',
+      items: { type: 'string' }
+    },
+    code: { type: 'string' },
+    notes: { type: 'string' }
+  }
+};
+
 export function normalizeOllamaBaseUrl(endpoint = DEFAULT_OLLAMA_BASE_URL) {
   const value = String(endpoint || DEFAULT_OLLAMA_BASE_URL).trim();
   const url = new URL(value);
@@ -147,7 +167,52 @@ export function buildModuleSuggestionPrompt({ userPrompt, stage, modules }) {
   ].join('\n');
 }
 
+export function buildGeneratedVisualArtifactPrompt({ userPrompt, stage, diagnostics = '', priorCode = '' }) {
+  return [
+    'You are the Code Foundry local coding SLM inside GEF, an audio-reactive visual engine.',
+    'Your job is to draft one Canvas2D render-function body as a structured JSON artifact.',
+    '',
+    'Core rule: Models may suggest. Validators decide. Users promote.',
+    '',
+    'Safety rules:',
+    '- Return JSON only. No markdown. No prose outside JSON.',
+    '- Do not use fetch, XMLHttpRequest, WebSocket, localStorage, sessionStorage, indexedDB, document, window, navigator, location, eval, Function, import, workers, postMessage, cookies, script tags, or DOM mutation.',
+    '- Do not include a full function declaration, imports, exports, markdown fences, HTML, or external assets.',
+    '- Draft only the body of a render function that receives ctx, w, h, time, audio, fbCtx, and Math.',
+    '- Use only Canvas2D drawing calls on ctx and safe math.',
+    '- Treat audio as an object with bass, mid, treble, beat, glitch, centroid, and rms values from 0 to 1.',
+    '- Keep loops bounded and readable. Prefer deterministic drawing over random unless it is controlled by time/audio.',
+    '- The generated artifact is untrusted text. It will be validated before sandbox preview.',
+    '',
+    `Requested stage: ${stage || 'OVERLAY'}`,
+    '',
+    'User visual direction:',
+    String(userPrompt || '').trim() || '(empty prompt)',
+    '',
+    'Recent diagnostics or manual compiler context:',
+    String(diagnostics || '').trim() || '(none)',
+    '',
+    'Prior code or notes for repair context:',
+    String(priorCode || '').trim() || '(none)',
+    '',
+    'Return exactly this JSON shape:',
+    '{"schemaName":"gef-generated-visual-artifact","schemaVersion":1,"lane":"codeFoundry","runtime":"canvas2d","renderLane":"canvas2d","stage":"OVERLAY","name":"Short visual name","usedAudioSignals":["bass","beat"],"code":"ctx.save();\\n// render body only\\nctx.restore();","notes":"short validator-facing note"}'
+  ].join('\n');
+}
+
 export async function requestOllamaModuleSuggestion({ endpoint, model, userPrompt, stage, modules }) {
   const prompt = buildModuleSuggestionPrompt({ userPrompt, stage, modules });
   return generateOllamaJson({ endpoint, model, prompt, schema: moduleSuggestionSchema });
+}
+
+export async function requestOllamaGeneratedVisualArtifact({ endpoint, model, userPrompt, stage, diagnostics, priorCode }) {
+  const prompt = buildGeneratedVisualArtifactPrompt({ userPrompt, stage, diagnostics, priorCode });
+  return generateOllamaJson({
+    endpoint,
+    model,
+    prompt,
+    schema: generatedVisualArtifactSchema,
+    temperature: 0.08,
+    maxTokens: 900
+  });
 }
