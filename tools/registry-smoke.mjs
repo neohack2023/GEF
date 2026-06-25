@@ -72,6 +72,8 @@ function assertLaneAndStageFilters() {
 
   assert(canvasModules.length > 0, 'Canvas2D lane should have curated modules.');
   assert(baseModules.length > 0, 'Base stage should have at least one module.');
+  assert(isKnownModuleStage(MODULE_STAGES.PRE_BASE), 'PRE_BASE should remain a known stage while the UI exposes it.');
+  assert(!isBaseStage(MODULE_STAGES.PRE_BASE), 'PRE_BASE should not be treated as a base replacement stage.');
   assert(isBaseStage(MODULE_STAGES.BASE), 'BASE should be treated as a base stage.');
   assert(isBaseStage(MODULE_STAGES.BASE_3D), 'BASE_3D should be treated as a base stage.');
 }
