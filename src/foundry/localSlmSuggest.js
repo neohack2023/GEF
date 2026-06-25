@@ -5,10 +5,10 @@ import {
   requestOllamaGeneratedVisualArtifact,
   requestOllamaModuleSuggestion
 } from '../slm/providers/ollamaProvider.js';
-import { SLM_LANE_IDS, getDefaultSlmModel } from '../slm/slmLanes.js';
+import { DEFAULT_LOCAL_SLM_ENDPOINT, SLM_LANE_IDS, getDefaultSlmModel } from '../slm/slmLanes.js';
 import { validateGeneratedVisualArtifact } from '../slm/validators/generatedVisualArtifactValidator.js';
 import { validateModuleSuggestion } from '../slm/validators/moduleSuggestionValidator.js';
-import { readProviderSettings } from './providerSettings.js';
+import { readProviderSettings, readSettingsFromForm } from './providerSettings.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -103,14 +103,19 @@ function clearPreviewSuggestion() {
   setPreviewSuggestion(null);
 }
 
+function readLiveProviderSettings() {
+  return $('provider-mode') ? readSettingsFromForm() : readProviderSettings();
+}
+
 function getConfiguredLocalSlm(defaultLane = SLM_LANE_IDS.LIGHT_HELPER) {
-  const settings = readProviderSettings();
-  if (settings.mode !== 'local-slm') {
-    throw new Error('Switch Provider Access to Local SLM Endpoint first.');
+  const settings = readLiveProviderSettings();
+  const mode = settings.mode || $('provider-mode')?.value;
+  if (mode !== 'local-slm') {
+    throw new Error('Choose Local SLM Endpoint in Provider Access first.');
   }
 
   return {
-    endpoint: settings.endpoint || 'http://localhost:11434',
+    endpoint: settings.endpoint || DEFAULT_LOCAL_SLM_ENDPOINT,
     model: settings.model || getDefaultSlmModel(defaultLane)
   };
 }
@@ -370,7 +375,7 @@ function injectLocalSlmControls() {
   output.style.borderRadius = '8px';
   output.style.background = 'rgba(0,0,0,.36)';
   output.style.border = '1px solid rgba(255,255,255,.08)';
-  output.textContent = 'Local SLM lane ready. Use Ask Local SLM for curated-module suggestions or Ask Code SLM for untrusted Code Foundry artifacts.';
+  output.textContent = 'Local SLM lane ready. Choose Local SLM Endpoint to use local defaults. Use Ask Local SLM for curated-module suggestions or Ask Code SLM for untrusted Code Foundry artifacts.';
 
   statusEl.insertAdjacentElement('afterend', output);
   statusEl.insertAdjacentElement('afterend', controls);
