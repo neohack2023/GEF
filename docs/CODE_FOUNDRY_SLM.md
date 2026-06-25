@@ -1,6 +1,6 @@
 # Code Foundry SLM Lane
 
-GEF now has a second local SLM lane for code-shaped work.
+GEF has a local SLM lane for code-shaped work.
 
 This lane is separate from the small local helper model.
 
@@ -9,6 +9,40 @@ llama3.2:3b thinks lightly.
 qwen2.5-coder:3b drafts code artifacts.
 validators decide what survives.
 users promote what belongs in the renderer.
+```
+
+---
+
+## Current implementation
+
+The first Code Foundry implementation is intentionally conservative about authority but more flexible about visual ideas.
+
+It can:
+
+1. Ask a local Ollama coding model for a structured Canvas2D artifact.
+2. Invite controlled experimentation: pseudo-3D, gradients, bounded particles, feedback ghosts, beat bloom, glitch geometry, and audio-shaped lattices.
+3. Validate the artifact shape.
+4. Require the artifact to contain functional Canvas2D drawing behavior.
+5. Run static generated-code policy checks.
+6. Stage accepted code as **untrusted text** in the manual compiler/code viewer.
+7. Ask the user to run the manual check before any sandbox path.
+
+It does **not** yet:
+
+- execute generated code
+- compile generated code
+- auto-preview generated code in sandbox
+- promote generated code to main runtime
+- write generated code into curated module files
+
+Implementation files:
+
+```text
+src/slm/providers/ollamaProvider.js
+src/slm/validators/generatedVisualCodePolicy.js
+src/slm/validators/generatedVisualArtifactValidator.js
+src/foundry/localSlmSuggest.js
+tools/code-foundry-smoke.mjs
 ```
 
 ---
@@ -22,6 +56,7 @@ It is not a direct runtime authority.
 Good jobs:
 
 - generate a candidate Canvas2D render body
+- experiment inside bounded Canvas2D rules
 - lint a generated visual module against GEF rules
 - repair syntax errors from a failed compile smoke test
 - repair runtime errors from a sandbox smoke test
@@ -78,7 +113,7 @@ src/slm/slmLanes.js
 
 ## Required pipeline
 
-The Code Foundry lane must use this path:
+The full Code Foundry lane must use this path:
 
 ```text
 prompt
@@ -91,9 +126,39 @@ prompt
 -> user_promotion
 ```
 
+The current implementation stops after `validate_static_policy` and stages the code as manual compiler text.
+
 The app should never treat a generated module as trusted just because a model wrote it cleanly.
 
 A pretty hallucination is still a hallucination wearing stage lights.
+
+---
+
+## Experiment lane
+
+Code Foundry artifacts may be visually ambitious, but they must stay bounded.
+
+Allowed experimental directions:
+
+- pseudo-3D tunnels, rings, depth grids, or waveform terrain
+- bounded particles or sparks
+- audio-shaped lattices and ribbons
+- gradient fields and radial bloom
+- feedback ghosting through `fbCtx`
+- controlled glitch slices and geometry jitter
+- composite modes that stay inside the current canvas context
+
+Required functional checks:
+
+- code must use `ctx` drawing APIs
+- code should reference `w` or `h` for responsive rendering
+- code should reference `time` or `audio` for motion/reactivity
+- code must include at least one recognizable Canvas2D drawing operation
+- loops must have visible bounds
+- `ctx.save()` and `ctx.restore()` should be balanced
+- artifact should include a fallback plan
+
+The useful target is not “safe and boring.” It is “experimental, bounded, inspectable, and recoverable.”
 
 ---
 
@@ -117,12 +182,13 @@ The generated artifact should be a render-function body only. It should not impo
 
 ## Static policy screen
 
-Generated code should pass the static policy validator before compile/runtime smoke tests.
+Generated code must pass the static policy validator before compile/runtime smoke tests.
 
-Validator file:
+Validator files:
 
 ```text
 src/slm/validators/generatedVisualCodePolicy.js
+src/slm/validators/generatedVisualArtifactValidator.js
 ```
 
 Blocked patterns include:
@@ -137,9 +203,9 @@ This is not a complete security system by itself. It is the first fence before d
 
 ---
 
-## Suggested artifact shape
+## Artifact shape
 
-When the Code Foundry lane is wired into Foundry, prefer a structured object instead of freeform prose:
+The Code Foundry lane requests a structured object instead of freeform prose:
 
 ```json
 {
@@ -147,15 +213,19 @@ When the Code Foundry lane is wired into Foundry, prefer a structured object ins
   "schemaVersion": 1,
   "lane": "codeFoundry",
   "runtime": "canvas2d",
+  "renderLane": "canvas2d",
   "stage": "OVERLAY",
   "name": "Bass Lattice Bloom",
+  "experimentLevel": "medium",
+  "techniques": ["pseudo-3d", "beat-bloom", "gradient-field"],
   "usedAudioSignals": ["bass", "beat", "glitch", "centroid"],
-  "code": "// NAME: Bass Lattice Bloom\nctx.save();\n...\nctx.restore();",
+  "code": "ctx.save();\n...\nctx.restore();",
+  "fallbackPlan": "Reduce to a simple beat-reactive ring field if the experiment is too heavy.",
   "notes": "Beat expands the lattice, centroid shifts hue, glitch slices the frame."
 }
 ```
 
-Only the validated `code` field should move toward sandbox preview.
+Only a validated `code` field may move toward later compile smoke and sandbox preview work.
 
 ---
 
