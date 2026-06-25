@@ -27,12 +27,12 @@ Current implementation:
 
 The Foundry panel has an editable prompt window. The Prompt Builder adds controls around that window, but the textarea stays the source of truth.
 
-The Foundry Provider Access panel gains local SLM controls at runtime:
+The Foundry Provider Access panel gains a simplified local SLM control strip at runtime:
 
-- **Test Ollama**
-- **Ask Local SLM**
-- **Preview Suggestion**
-- **Ask Code SLM**
+- **Check Models**
+- **Local task** menu: Curated suggestion or Code Foundry draft
+- **Run Local SLM**
+- **Preview Suggestion**, shown only after a valid curated suggestion
 - **Local SLM models** inventory panel
 
 The inventory panel shows:
@@ -48,6 +48,12 @@ When Provider Access is set to **Local SLM Endpoint**, GEF auto-fills local defa
 Endpoint: http://localhost:11434
 Model: llama3.2:3b
 Credential reference: local-only
+```
+
+When the local task is switched to **Code Foundry draft**, GEF uses the Code Foundry lane model:
+
+```text
+qwen2.5-coder:3b
 ```
 
 The endpoint is still used internally because the browser talks to the local Ollama service over localhost. The user should not need to manually type it for the normal laptop-local setup.
@@ -133,7 +139,7 @@ It adds:
 
 Every control appends normal editable text into the Foundry prompt window.
 
-The user can still edit, remove, rewrite, or reorder anything before pressing **Ask Local SLM** or **Ask Code SLM**.
+The user can still edit, remove, rewrite, or reorder anything before pressing **Run Local SLM**.
 
 ---
 
@@ -168,6 +174,7 @@ Recommended GEF settings for curated-module suggestions are normally automatic a
 ```text
 Provider mode: Local SLM Endpoint
 Endpoint: http://localhost:11434
+Task: Curated suggestion
 Model: llama3.2:3b
 Credential reference: local-only
 ```
@@ -177,6 +184,7 @@ Recommended GEF settings for Code Foundry:
 ```text
 Provider mode: Local SLM Endpoint
 Endpoint: http://localhost:11434
+Task: Code Foundry draft
 Model: qwen2.5-coder:3b
 Credential reference: local-only
 ```
@@ -218,7 +226,7 @@ The validator checks:
 
 If validation fails, the response is logged as rejected.
 
-If validation passes, the suggestion is displayed and logged. It does not apply a runtime change.
+If validation passes, the suggestion is displayed and logged. It does not promote a runtime change. The preview button appears only after validation passes.
 
 ---
 
@@ -241,7 +249,18 @@ src/slm/validators/generatedVisualCodePolicy.js
 src/slm/validators/generatedVisualArtifactValidator.js
 ```
 
-Do not confuse this lane with the curated-module suggestion button. The suggestion button chooses from existing modules. Code Foundry drafts candidate code artifacts for a validator-gated path.
+Do not confuse this lane with the curated-module suggestion task. The suggestion task chooses from existing modules. Code Foundry drafts candidate code artifacts for a validator-gated path.
+
+---
+
+## Timeout behavior
+
+Local model calls use a longer generation timeout because the first request can include model loading. If a request times out:
+
+1. Confirm `ollama serve` is running.
+2. Confirm the model is installed.
+3. Run **Check Models**.
+4. Try the same task again after the model has warmed.
 
 ---
 
@@ -266,7 +285,7 @@ The model is a navigator with a paper map, not a mechanic with a wrench.
 
 Browser-to-localhost requests may be affected by browser policy, hosting origin, or local Ollama configuration.
 
-If **Test Ollama** fails:
+If **Check Models** fails:
 
 1. Run `npm run setup:slm`.
 2. Confirm Ollama is installed.
