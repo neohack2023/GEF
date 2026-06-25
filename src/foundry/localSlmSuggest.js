@@ -1,14 +1,21 @@
 import { logAutopilot } from '../autopilot/autopilotStub.js';
 import { RENDER_LANES, getModuleById, getModuleCatalog } from '../render/moduleRegistry.js';
-import { listOllamaModels, requestOllamaModuleSuggestion } from '../slm/providers/ollamaProvider.js';
+import {
+  listOllamaModels,
+  requestOllamaGeneratedVisualArtifact,
+  requestOllamaModuleSuggestion
+} from '../slm/providers/ollamaProvider.js';
 import { SLM_LANE_IDS, getDefaultSlmModel } from '../slm/slmLanes.js';
+import { validateGeneratedVisualArtifact } from '../slm/validators/generatedVisualArtifactValidator.js';
 import { validateModuleSuggestion } from '../slm/validators/moduleSuggestionValidator.js';
 import { readProviderSettings } from './providerSettings.js';
 
 const $ = (id) => document.getElementById(id);
 
 let latestValidatedSuggestion = null;
+let latestGeneratedArtifact = null;
 let previewSuggestionBtn = null;
+let codeFoundryBtn = null;
 
 function setStatus(text, timeout = 3200) {
   const status = $('status-bar');
@@ -63,6 +70,26 @@ function setOutput(text, tone = 'info') {
   output.textContent = text;
 }
 
+function setManualCompilerOutput(text, tone = 'info') {
+  const output = $('manual-compiler-output');
+  if (!output) return;
+  output.dataset.tone = tone;
+  output.textContent = text;
+}
+
+function setButtonBusy(button, isBusy, busyText) {
+  if (!button) return;
+  if (isBusy) {
+    button.dataset.originalText = button.textContent;
+    button.textContent = busyText;
+    button.disabled = true;
+    return;
+  }
+
+  button.textContent = button.dataset.originalText || button.textContent;
+  button.disabled = false;
+}
+
 function setPreviewSuggestion(suggestion) {
   latestValidatedSuggestion = suggestion;
   if (!previewSuggestionBtn) return;
@@ -76,7 +103,7 @@ function clearPreviewSuggestion() {
   setPreviewSuggestion(null);
 }
 
-function getConfiguredLocalSlm() {
+function getConfiguredLocalSlm(defaultLane = SLM_LANE_IDS.LIGHT_HELPER) {
   const settings = readProviderSettings();
   if (settings.mode !== 'local-slm') {
     throw new Error('Switch Provider Access to Local SLM Endpoint first.');
@@ -84,7 +111,7 @@ function getConfiguredLocalSlm() {
 
   return {
     endpoint: settings.endpoint || 'http://localhost:11434',
-    model: settings.model || getDefaultSlmModel(SLM_LANE_IDS.LIGHT_HELPER)
+    model: settings.model || getDefaultSlmModel(defaultLane)
   };
 }
 
@@ -93,6 +120,58 @@ function activateSandboxUi() {
   if (!sandboxToggle) return;
   sandboxToggle.checked = true;
   sandboxToggle.dispatchEvent(new window.Event('change', { bubbles: true }));
+}
+
+function collectDiagnostics() {
+  const log = $('diagnostics-log');
+  if (!log) return '';
+
+  return [...log.querySelectorAll('div')]
+    .slice(-8)
+    .map((row) => row.textContent.trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
+function getUserVisualPrompt() {
+  return $('autopilot-seeds')?.value || $('director-prompt')?.value || '';
+}
+
+function openCodeLayer() {
+  $('code-layer')?.classList.remove('hidden');
+}
+
+function writeArtifactToCodeViewer(artifact, validation) {
+  const codeViewer = $('code-viewer');
+  if (codeViewer) {
+    codeViewer.value = artifact.code;
+  }
+
+  const codeFormat = $('code-format');
+  if (codeFormat) {
+    codeFormat.value = 'js';
+  }
+
+  const title = $('code-title');
+  if (title) {
+    title.textContent = `Code Foundry Candidate · ${artifact.name}`;
+  }
+
+  openCodeLayer();
+
+  const warnings = validation.warnings.length
+    ? `\n\nWarnings:\n${validation.warnings.map((warning) => `- ${warning}`).join('\n')}`
+    : '';
+
+  setManualCompilerOutput([
+    `Code Foundry artifact staged as untrusted text: ${artifact.name}`,
+    `Stage: ${artifact.stage}`,
+    `Signals: ${artifact.usedAudioSignals.join(', ') || 'not declared'}`,
+    `Policy: ${validation.policy.message}`,
+    '',
+    'Next gate: run Check. Sandbox preview remains manual and user-controlled.',
+    warnings
+  ].join('\n'), validation.warnings.length ? 'warn' : 'ok');
 }
 
 function previewValidatedSuggestion() {
@@ -135,7 +214,7 @@ function previewValidatedSuggestion() {
 async function testLocalSlm() {
   try {
     clearPreviewSuggestion();
-    const settings = getConfiguredLocalSlm();
+    const settings = getConfiguredLocalSlm(SLM_LANE_IDS.LIGHT_HELPER);
     setOutput('Checking local Ollama models...', 'info');
     const models = await listOllamaModels(settings);
     const names = models.map((model) => model.name || model.model).filter(Boolean);
@@ -152,8 +231,8 @@ async function testLocalSlm() {
 async function suggestModule() {
   try {
     clearPreviewSuggestion();
-    const settings = getConfiguredLocalSlm();
-    const userPrompt = $('autopilot-seeds')?.value || $('director-prompt')?.value || '';
+    const settings = getConfiguredLocalSlm(SLM_LANE_IDS.LIGHT_HELPER);
+    const userPrompt = getUserVisualPrompt();
     const stage = $('evo-stage')?.value || 'OVERLAY';
     const modules = getModuleCatalog();
 
@@ -161,6 +240,7 @@ async function suggestModule() {
       throw new Error('Add a Foundry seed or Mutation Forge prompt first.');
     }
 
+    setButtonBusy(previewSuggestionBtn, true, 'Preview Suggestion');
     setOutput('Asking local SLM for one curated module suggestion...', 'info');
     const result = await requestOllamaModuleSuggestion({
       ...settings,
@@ -204,6 +284,64 @@ async function suggestModule() {
   }
 }
 
+async function generateCodeArtifact() {
+  try {
+    latestGeneratedArtifact = null;
+    const settings = getConfiguredLocalSlm(SLM_LANE_IDS.CODE_FOUNDRY);
+    const userPrompt = getUserVisualPrompt();
+    const stage = $('evo-stage')?.value || 'OVERLAY';
+    const priorCode = $('code-viewer')?.value || '';
+
+    if (!userPrompt.trim()) {
+      throw new Error('Add a Foundry seed or Mutation Forge prompt first.');
+    }
+
+    setButtonBusy(codeFoundryBtn, true, 'Coding...');
+    setOutput(`Asking Code Foundry model ${settings.model} for a Canvas2D candidate artifact...`, 'info');
+
+    const result = await requestOllamaGeneratedVisualArtifact({
+      ...settings,
+      userPrompt,
+      stage,
+      diagnostics: collectDiagnostics(),
+      priorCode
+    });
+
+    const validation = validateGeneratedVisualArtifact(result.data);
+    if (!validation.ok) {
+      const message = [
+        'Code Foundry artifact rejected by validator:',
+        ...validation.errors.map((error) => `- ${error}`),
+        validation.warnings.length ? '\nWarnings:' : '',
+        ...validation.warnings.map((warning) => `- ${warning}`)
+      ].filter(Boolean).join('\n');
+      logAutopilot('CODE_FOUNDRY_REJECTED', message, { candidate: result.data, validation });
+      renderDirectLog('CODE_FOUNDRY_REJECTED', message);
+      setOutput(message, 'warn');
+      setManualCompilerOutput(message, 'warn');
+      setStatus('Code Foundry candidate rejected.', 4200);
+      return;
+    }
+
+    latestGeneratedArtifact = validation.artifact;
+    writeArtifactToCodeViewer(latestGeneratedArtifact, validation);
+
+    const message = `Code Foundry staged candidate artifact: ${latestGeneratedArtifact.name} (${latestGeneratedArtifact.stage}).`;
+    logAutopilot('CODE_FOUNDRY_ARTIFACT', message, { artifact: latestGeneratedArtifact, warnings: validation.warnings });
+    renderDirectLog('CODE_FOUNDRY_ARTIFACT', message);
+    setOutput(`${message}\n\nThe generated code is untrusted text in the manual compiler. Run Check before any sandbox path.`, validation.warnings.length ? 'warn' : 'good');
+    setStatus('Code Foundry candidate staged for manual validation.', 3200);
+  } catch (error) {
+    const message = `Code Foundry generation failed: ${error.message || error}`;
+    logAutopilot('CODE_FOUNDRY_ERROR', message);
+    renderDirectLog('CODE_FOUNDRY_ERROR', message);
+    setOutput(message, 'warn');
+    setStatus(message, 5200);
+  } finally {
+    setButtonBusy(codeFoundryBtn, false, 'Ask Code SLM');
+  }
+}
+
 function injectLocalSlmControls() {
   const statusEl = $('provider-settings-status');
   if (!statusEl || $('local-slm-output')) return;
@@ -219,8 +357,10 @@ function injectLocalSlmControls() {
   previewSuggestionBtn = createButton('provider-preview-suggestion-btn', 'Preview Suggestion', 'btn-small');
   previewSuggestionBtn.disabled = true;
   previewSuggestionBtn.title = 'Ask Local SLM for a validated suggestion first.';
+  codeFoundryBtn = createButton('provider-code-foundry-btn', 'Ask Code SLM', 'btn-small btn-ai');
+  codeFoundryBtn.title = 'Ask the local coding SLM for a validator-screened Canvas2D artifact.';
 
-  controls.append(testBtn, suggestBtn, previewSuggestionBtn);
+  controls.append(testBtn, suggestBtn, previewSuggestionBtn, codeFoundryBtn);
 
   const output = document.createElement('div');
   output.id = 'local-slm-output';
@@ -230,7 +370,7 @@ function injectLocalSlmControls() {
   output.style.borderRadius = '8px';
   output.style.background = 'rgba(0,0,0,.36)';
   output.style.border = '1px solid rgba(255,255,255,.08)';
-  output.textContent = 'Local SLM lane ready. Use Test Ollama, Ask Local SLM, then Preview Suggestion for sandbox-only staging.';
+  output.textContent = 'Local SLM lane ready. Use Ask Local SLM for curated-module suggestions or Ask Code SLM for untrusted Code Foundry artifacts.';
 
   statusEl.insertAdjacentElement('afterend', output);
   statusEl.insertAdjacentElement('afterend', controls);
@@ -238,6 +378,7 @@ function injectLocalSlmControls() {
   testBtn.addEventListener('click', testLocalSlm);
   suggestBtn.addEventListener('click', suggestModule);
   previewSuggestionBtn.addEventListener('click', previewValidatedSuggestion);
+  codeFoundryBtn.addEventListener('click', generateCodeArtifact);
 }
 
 if (document.readyState === 'loading') {
