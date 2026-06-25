@@ -1,10 +1,12 @@
 # GEF Docs Index
 
-Project planning and architecture notes for GEF Sandbox Compiler v2.3.
+Project planning, architecture notes, workflow rules, and LLM handoff documents for GEF.
+
+Start at the root [`README.md`](../README.md). It is the mission, quickstart, and LLM handoff index. This file is the deeper docs table of contents.
 
 ## Current status
 
-- [Current Status](./CURRENT_STATUS.md) — quick handoff note for what has been verified, what Phase 1 hardening is complete, current limitations, and the next recommended build step.
+- [Current Status](./CURRENT_STATUS.md) — quick handoff note for what has been verified, the latest merged work, current limitations, and the next recommended build step.
 
 ## Build plans
 
