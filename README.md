@@ -19,6 +19,14 @@ Then open:
 http://127.0.0.1:8080
 ```
 
+For local SLM setup, run the Command Prompt menu:
+
+```bash
+npm run setup:slm
+```
+
+The menu checks whether Ollama is installed, whether the local service responds, which GEF models are available, and can pull missing required models.
+
 Do not open `index.html` directly with `file://`. GEF uses browser ES modules, so direct file loading gives the page a `null` origin and modern browsers block module imports. Always use the npm-hosted local server.
 
 Useful scripts:
@@ -71,6 +79,7 @@ The current browser prototype includes:
 - safe Foundry/Autopilot stubs
 - local Ollama SLM suggestions for curated modules
 - split local SLM lane profiles for light helper and code foundry tasks
+- npm-driven SLM setup menu for Ollama and model checks
 - static policy screening for generated visual code artifacts
 - Vite-hosted local development and build preview
 - TypeScript project configuration for gradual type adoption
