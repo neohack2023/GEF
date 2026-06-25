@@ -17,6 +17,7 @@ This file is the human-readable task ledger for GEF.
 - [ ] Optionally move legacy UI imports from `visualModules.js` to `moduleRegistry.js` after the compatibility wrapper is no longer useful.
 - [ ] Expand browser smoke coverage beyond Chromium boot and mocked Local SLM preview.
 - [ ] Gradually migrate browser modules from JavaScript to TypeScript after the Vite/TypeScript toolchain settles.
+- [ ] Add compile-smoke and sandbox-preview gates for generated Code Foundry artifacts after static validation proves stable.
 
 ## Done
 
@@ -30,3 +31,4 @@ This file is the human-readable task ledger for GEF.
 - [x] Add registry smoke checks for metadata, render lookup, and SLM suggestion validation drift.
 - [x] Add Vite-hosted npm local dev flow and TypeScript project configuration.
 - [x] Add Playwright Chromium smoke tests for boot, sandbox panic, and mocked Local SLM Preview Suggestion.
+- [x] Add Code Foundry local SLM lane for validator-screened Canvas2D artifact generation.
