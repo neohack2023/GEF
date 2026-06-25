@@ -6,6 +6,7 @@ export const RENDER_LANES = Object.freeze({
 });
 
 export const MODULE_STAGES = Object.freeze({
+  PRE_BASE: 'PRE_BASE',
   BASE: 'BASE',
   OVERLAY: 'OVERLAY',
   POST_FX: 'POST_FX',
