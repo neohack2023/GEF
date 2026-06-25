@@ -1,5 +1,8 @@
+import { DEFAULT_LOCAL_SLM_ENDPOINT, SLM_LANE_IDS, getDefaultSlmModel } from '../slm/slmLanes.js';
+
 const PROVIDER_SETTINGS_KEY = 'gef_provider_settings';
 const VALID_MODES = new Set(['none', 'local-slm', 'llm-proxy']);
+const LOCAL_CREDENTIAL_REF = 'local-only';
 
 const DEFAULT_PROVIDER_SETTINGS = {
   mode: 'none',
@@ -15,16 +18,27 @@ function clampText(value, maxLength = 300) {
   return String(value || '').trim().slice(0, maxLength);
 }
 
+function applyProviderDefaults(settings) {
+  if (settings.mode !== 'local-slm') return settings;
+
+  return {
+    ...settings,
+    endpoint: settings.endpoint || DEFAULT_LOCAL_SLM_ENDPOINT,
+    model: settings.model || getDefaultSlmModel(SLM_LANE_IDS.LIGHT_HELPER),
+    credentialRef: settings.credentialRef || LOCAL_CREDENTIAL_REF
+  };
+}
+
 function normalizeProviderSettings(settings = {}) {
   const mode = VALID_MODES.has(settings.mode) ? settings.mode : DEFAULT_PROVIDER_SETTINGS.mode;
 
-  return {
+  return applyProviderDefaults({
     mode,
     endpoint: clampText(settings.endpoint),
     model: clampText(settings.model, 120),
     credentialRef: clampText(settings.credentialRef, 120),
     updatedAt: settings.updatedAt || null
-  };
+  });
 }
 
 function readProviderSettings() {
@@ -137,7 +151,37 @@ function saveProviderSettings() {
 }
 
 async function copyProviderContract() {
-  const contract = `GEF_PROVIDER_PROXY_CONTRACT_V1\n\nBrowser role:\n- Stores provider mode, endpoint, model, and credential reference only.\n- Sends structured requests to a local SLM endpoint or a user-controlled LLM proxy.\n- Treats every provider response as untrusted text.\n\nProxy/server role:\n- Owns provider credentials outside frontend code.\n- Applies rate limits, validation, timeouts, and logging.\n- Returns structured suggestions only.\n\nSuggested response shape:\n{\n  "schemaName": "gef-provider-suggestion",\n  "schemaVersion": 1,\n  "provider": "local-slm-or-llm-proxy",\n  "model": "model-name",\n  "summary": "Plain-language suggestion summary.",\n  "suggestions": [\n    {\n      "type": "curated-module",\n      "moduleId": "spectralGrid",\n      "reason": "Why this should be previewed."\n    }\n  ],\n  "diagnostics": []\n}\n\nPromotion rule:\nModels may suggest. Validators decide. Users promote.`;
+  const contract = `GEF_PROVIDER_PROXY_CONTRACT_V1
+
+Browser role:
+- Stores provider mode, endpoint, model, and credential reference only.
+- Sends structured requests to a local SLM endpoint or a user-controlled LLM proxy.
+- Treats every provider response as untrusted text.
+
+Proxy/server role:
+- Owns provider credentials outside frontend code.
+- Applies rate limits, validation, timeouts, and logging.
+- Returns structured suggestions only.
+
+Suggested response shape:
+{
+  "schemaName": "gef-provider-suggestion",
+  "schemaVersion": 1,
+  "provider": "local-slm-or-llm-proxy",
+  "model": "model-name",
+  "summary": "Plain-language suggestion summary.",
+  "suggestions": [
+    {
+      "type": "curated-module",
+      "moduleId": "spectralGrid",
+      "reason": "Why this should be previewed."
+    }
+  ],
+  "diagnostics": []
+}
+
+Promotion rule:
+Models may suggest. Validators decide. Users promote.`;
 
   try {
     await navigator.clipboard.writeText(contract);
@@ -155,7 +199,7 @@ function bindProviderSettings() {
   $('provider-copy-contract-btn')?.addEventListener('click', copyProviderContract);
   $('provider-mode')?.addEventListener('change', () => {
     const settings = readSettingsFromForm();
-    $('provider-settings-status').textContent = describeProvider(settings);
+    renderProviderSettings(settings);
   });
 }
 
@@ -165,4 +209,4 @@ if (document.readyState === 'loading') {
   bindProviderSettings();
 }
 
-export { readProviderSettings, writeProviderSettings, normalizeProviderSettings };
+export { readProviderSettings, readSettingsFromForm, writeProviderSettings, normalizeProviderSettings };
