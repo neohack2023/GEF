@@ -5,13 +5,17 @@
   "type": "module",
   "description": "Browser-first generative visual engine for audio-reactive art systems.",
   "scripts": {
-    "dev": "python -m http.server 8080",
-    "check": "npm run check:syntax && npm run check:registry && npm run lint && npm run check:security",
+    "dev": "vite --host 127.0.0.1 --port 8080 --strictPort",
+    "build": "npm run check:types && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    "serve:test": "vite --host 127.0.0.1 --port 4173 --strictPort",
+    "check": "npm run check:syntax && npm run check:types && npm run check:registry && npm run lint && npm run check:security",
     "check:syntax": "node --check src/app.js && node --check src/audio/analyzer.js && node --check src/render/canvasRuntime.js && node --check src/render/visualModuleFns.js && node --check src/render/visualModules.js && node --check src/render/moduleRegistry.js && node --check tools/registry-smoke.mjs && node --check src/storage/localLibrary.js && node --check src/storage/quarantineReview.js && node --check src/slm/slmLanes.js && node --check src/slm/providers/ollamaProvider.js && node --check src/slm/validators/moduleSuggestionValidator.js && node --check src/slm/validators/generatedVisualCodePolicy.js && node --check src/foundry/promptBuilder.js && node --check src/foundry/localSlmSuggest.js && node --check src/autopilot/autopilotStub.js && node --check tests/e2e/boot.spec.js && node --check tests/e2e/slm-preview.spec.js",
+    "check:types": "tsc --noEmit",
     "check:registry": "node tools/registry-smoke.mjs",
     "check:security": "node tools/security-scan.mjs",
     "lint": "eslint .",
-    "smoke:manual": "echo Open http://localhost:8080 after npm run dev and follow docs/CURRENT_STATUS.md",
+    "smoke:manual": "echo Run npm install, npm run dev, then open http://127.0.0.1:8080",
     "test:e2e": "playwright test",
     "test:e2e:chromium": "playwright test --project=chromium",
     "test:e2e:ui": "playwright test --ui"
@@ -25,6 +29,8 @@
   "license": "UNLICENSED",
   "devDependencies": {
     "@playwright/test": "^1.45.0",
-    "eslint": "^9.0.0"
+    "eslint": "^9.0.0",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.0"
   }
 }
