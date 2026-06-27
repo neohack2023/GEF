@@ -24,6 +24,7 @@ Current implementation:
 - `src/foundry/promptBuilder.js`
 - `src/foundry/localSlmSuggest.js`
 - `scripts/setup/slm-setup.mjs`
+- `tools/slm-local-smoke.mjs`
 
 The Foundry panel has an editable prompt window. The Prompt Builder adds controls around that window, but the textarea stays the source of truth.
 
@@ -99,6 +100,36 @@ Optional heavier repair model:
 
 ```bash
 ollama pull qwen2.5-coder:7b
+```
+
+---
+
+## Real local smoke runner
+
+Use this when you want the installed SLMs to do real work from the command line:
+
+```bash
+npm run smoke:slm:local
+```
+
+This command uses live local Ollama responses. It does not use mock responses.
+
+It checks:
+
+1. Ollama responds at the configured local endpoint.
+2. Required models are installed.
+3. `llama3.2:3b` can produce a curated module suggestion.
+4. The curated suggestion passes GEF validation.
+5. `qwen2.5-coder:3b` can produce a Code Foundry artifact.
+6. The Code Foundry artifact passes GEF validation.
+
+It does not preview, import, execute, or promote generated output.
+
+Optional endpoint override:
+
+```bash
+set GEF_SLM_ENDPOINT=http://localhost:11434
+npm run smoke:slm:local
 ```
 
 ---
