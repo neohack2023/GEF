@@ -15,8 +15,14 @@ const $ = (id) => document.getElementById(id);
 let latestValidatedSuggestion = null;
 let latestGeneratedArtifact = null;
 let previewSuggestionBtn = null;
-let codeFoundryBtn = null;
+let runLocalSlmBtn = null;
+let localSlmTaskSelect = null;
 let modelStatusEl = null;
+
+const LOCAL_TASKS = Object.freeze({
+  MODULE_SUGGESTION: 'module-suggestion',
+  CODE_FOUNDRY: 'code-foundry'
+});
 
 const MODEL_PURPOSES = Object.freeze({
   [SLM_LANE_IDS.LIGHT_HELPER]: 'Prompt routing, feedback summaries, and curated-module suggestions.',
@@ -45,6 +51,24 @@ function createButton(id, text, className = 'btn-small') {
   button.className = className;
   button.textContent = text;
   return button;
+}
+
+function createTaskSelect() {
+  const select = document.createElement('select');
+  select.id = 'provider-local-task';
+  select.className = 'input-small';
+  select.title = 'Choose which local SLM lane to run.';
+
+  const suggestion = document.createElement('option');
+  suggestion.value = LOCAL_TASKS.MODULE_SUGGESTION;
+  suggestion.textContent = 'Curated suggestion';
+
+  const codeFoundry = document.createElement('option');
+  codeFoundry.value = LOCAL_TASKS.CODE_FOUNDRY;
+  codeFoundry.textContent = 'Code Foundry draft';
+
+  select.append(suggestion, codeFoundry);
+  return select;
 }
 
 function renderDirectLog(type, message) {
@@ -101,13 +125,30 @@ function setPreviewSuggestion(suggestion) {
   latestValidatedSuggestion = suggestion;
   if (!previewSuggestionBtn) return;
   previewSuggestionBtn.disabled = !suggestion;
+  previewSuggestionBtn.style.display = suggestion ? 'inline-flex' : 'none';
   previewSuggestionBtn.title = suggestion
     ? `Preview ${suggestion.moduleName} in sandbox`
-    : 'Ask Local SLM for a validated suggestion first.';
+    : 'Run a curated module suggestion first.';
 }
 
 function clearPreviewSuggestion() {
   setPreviewSuggestion(null);
+}
+
+function getSelectedLocalTask() {
+  return localSlmTaskSelect?.value || LOCAL_TASKS.MODULE_SUGGESTION;
+}
+
+function laneForTask(task = getSelectedLocalTask()) {
+  if (task === LOCAL_TASKS.CODE_FOUNDRY) return SLM_LANE_IDS.CODE_FOUNDRY;
+  return SLM_LANE_IDS.LIGHT_HELPER;
+}
+
+function syncModelForSelectedTask() {
+  const mode = $('provider-mode')?.value;
+  const modelEl = $('provider-model');
+  if (mode !== 'local-slm' || !modelEl) return;
+  modelEl.value = getDefaultSlmModel(laneForTask());
 }
 
 function getModelLaneRows(installedNames = null) {
@@ -134,7 +175,7 @@ function modelStatusLabel(row) {
   return row.optional ? 'optional' : 'required';
 }
 
-function renderModelInventory(installedNames = null, message = 'Click Test Ollama to check which local models are installed.') {
+function renderModelInventory(installedNames = null, message = 'Click Check Models to see what Ollama has installed locally.') {
   if (!modelStatusEl) return;
 
   modelStatusEl.replaceChildren();
@@ -207,7 +248,7 @@ function getConfiguredLocalSlm(defaultLane = SLM_LANE_IDS.LIGHT_HELPER) {
 
   return {
     endpoint: settings.endpoint || DEFAULT_LOCAL_SLM_ENDPOINT,
-    model: settings.model || getDefaultSlmModel(defaultLane)
+    model: getDefaultSlmModel(defaultLane)
   };
 }
 
@@ -273,7 +314,7 @@ function writeArtifactToCodeViewer(artifact, validation) {
 function previewValidatedSuggestion() {
   try {
     if (!latestValidatedSuggestion) {
-      throw new Error('Ask Local SLM for a validated suggestion first.');
+      throw new Error('Run a curated module suggestion first.');
     }
 
     const moduleDef = getModuleById(latestValidatedSuggestion.moduleId);
@@ -339,8 +380,8 @@ async function suggestModule() {
       throw new Error('Add a Foundry seed or Mutation Forge prompt first.');
     }
 
-    setButtonBusy(previewSuggestionBtn, true, 'Preview Suggestion');
-    setOutput('Asking local SLM for one curated module suggestion...', 'info');
+    setButtonBusy(runLocalSlmBtn, true, 'Thinking...');
+    setOutput(`Asking ${settings.model} for one curated module suggestion...`, 'info');
     const result = await requestOllamaModuleSuggestion({
       ...settings,
       userPrompt,
@@ -367,10 +408,10 @@ async function suggestModule() {
 
     if (canPreview) {
       setPreviewSuggestion(suggestion);
-      setOutput(`Validated suggestion: ${message}\n\nUse Preview Suggestion to stage this curated module in the sandbox.`, 'good');
+      setOutput(`Validated suggestion from ${settings.model}: ${message}\n\nPreview Suggestion is now available.`, 'good');
     } else {
       clearPreviewSuggestion();
-      setOutput(`Validated suggestion: ${message}\n\nThis module is not available in the current Canvas2D sandbox lane.`, 'warn');
+      setOutput(`Validated suggestion from ${settings.model}: ${message}\n\nThis module is not available in the current Canvas2D sandbox lane.`, 'warn');
     }
 
     setStatus('Validated local SLM suggestion received.', 2600);
@@ -380,11 +421,14 @@ async function suggestModule() {
     renderDirectLog('SLM_ERROR', message);
     setOutput(message, 'warn');
     setStatus(message, 5200);
+  } finally {
+    setButtonBusy(runLocalSlmBtn, false, 'Run Local SLM');
   }
 }
 
 async function generateCodeArtifact() {
   try {
+    clearPreviewSuggestion();
     latestGeneratedArtifact = null;
     const settings = getConfiguredLocalSlm(SLM_LANE_IDS.CODE_FOUNDRY);
     const userPrompt = getUserVisualPrompt();
@@ -395,8 +439,8 @@ async function generateCodeArtifact() {
       throw new Error('Add a Foundry seed or Mutation Forge prompt first.');
     }
 
-    setButtonBusy(codeFoundryBtn, true, 'Coding...');
-    setOutput(`Asking Code Foundry model ${settings.model} for a Canvas2D candidate artifact...`, 'info');
+    setButtonBusy(runLocalSlmBtn, true, 'Coding...');
+    setOutput(`Asking ${settings.model} for a Canvas2D candidate artifact. First local model load can take up to a minute...`, 'info');
 
     const result = await requestOllamaGeneratedVisualArtifact({
       ...settings,
@@ -425,7 +469,7 @@ async function generateCodeArtifact() {
     latestGeneratedArtifact = validation.artifact;
     writeArtifactToCodeViewer(latestGeneratedArtifact, validation);
 
-    const message = `Code Foundry staged candidate artifact: ${latestGeneratedArtifact.name} (${latestGeneratedArtifact.stage}).`;
+    const message = `Code Foundry staged candidate artifact from ${settings.model}: ${latestGeneratedArtifact.name} (${latestGeneratedArtifact.stage}).`;
     logAutopilot('CODE_FOUNDRY_ARTIFACT', message, { artifact: latestGeneratedArtifact, warnings: validation.warnings });
     renderDirectLog('CODE_FOUNDRY_ARTIFACT', message);
     setOutput(`${message}\n\nThe generated code is untrusted text in the manual compiler. Run Check before any sandbox path.`, validation.warnings.length ? 'warn' : 'good');
@@ -437,8 +481,18 @@ async function generateCodeArtifact() {
     setOutput(message, 'warn');
     setStatus(message, 5200);
   } finally {
-    setButtonBusy(codeFoundryBtn, false, 'Ask Code SLM');
+    setButtonBusy(runLocalSlmBtn, false, 'Run Local SLM');
   }
+}
+
+async function runSelectedLocalSlm() {
+  syncModelForSelectedTask();
+  if (getSelectedLocalTask() === LOCAL_TASKS.CODE_FOUNDRY) {
+    await generateCodeArtifact();
+    return;
+  }
+
+  await suggestModule();
 }
 
 function injectLocalSlmControls() {
@@ -449,17 +503,17 @@ function injectLocalSlmControls() {
   controls.className = 'flex-row';
   controls.style.marginTop = '8px';
 
-  const testBtn = createButton('provider-test-ollama-btn', 'Test Ollama', 'btn-small');
-  const suggestBtn = createButton('provider-suggest-module-btn', 'Ask Local SLM', 'btn-small btn-good');
-  suggestBtn.style.color = '#000';
-  suggestBtn.style.background = '#00ff88';
+  const testBtn = createButton('provider-test-ollama-btn', 'Check Models', 'btn-small');
+  localSlmTaskSelect = createTaskSelect();
+  runLocalSlmBtn = createButton('provider-run-local-slm-btn', 'Run Local SLM', 'btn-small btn-good');
+  runLocalSlmBtn.style.color = '#000';
+  runLocalSlmBtn.style.background = '#00ff88';
   previewSuggestionBtn = createButton('provider-preview-suggestion-btn', 'Preview Suggestion', 'btn-small');
   previewSuggestionBtn.disabled = true;
-  previewSuggestionBtn.title = 'Ask Local SLM for a validated suggestion first.';
-  codeFoundryBtn = createButton('provider-code-foundry-btn', 'Ask Code SLM', 'btn-small btn-ai');
-  codeFoundryBtn.title = 'Ask the local coding SLM for a validator-screened Canvas2D artifact.';
+  previewSuggestionBtn.style.display = 'none';
+  previewSuggestionBtn.title = 'Run a curated module suggestion first.';
 
-  controls.append(testBtn, suggestBtn, previewSuggestionBtn, codeFoundryBtn);
+  controls.append(testBtn, localSlmTaskSelect, runLocalSlmBtn, previewSuggestionBtn);
 
   const output = document.createElement('div');
   output.id = 'local-slm-output';
@@ -469,7 +523,7 @@ function injectLocalSlmControls() {
   output.style.borderRadius = '8px';
   output.style.background = 'rgba(0,0,0,.36)';
   output.style.border = '1px solid rgba(255,255,255,.08)';
-  output.textContent = 'Local SLM lane ready. Choose Local SLM Endpoint to use local defaults. Use Ask Local SLM for curated-module suggestions or Ask Code SLM for untrusted Code Foundry artifacts.';
+  output.textContent = 'Local SLM lane ready. Choose a task, then run the matching local model.';
 
   modelStatusEl = document.createElement('div');
   modelStatusEl.id = 'local-slm-model-status';
@@ -486,13 +540,20 @@ function injectLocalSlmControls() {
   renderModelInventory();
 
   $('provider-mode')?.addEventListener('change', () => {
-    renderModelInventory(null, 'Click Test Ollama to check installed local models for this provider mode.');
+    syncModelForSelectedTask();
+    renderModelInventory(null, 'Click Check Models to see what Ollama has installed locally.');
+  });
+
+  localSlmTaskSelect.addEventListener('change', () => {
+    clearPreviewSuggestion();
+    syncModelForSelectedTask();
+    const lane = SLM_LANES[laneForTask()];
+    setOutput(`Selected ${lane.label}. GEF will use ${lane.model}.`, 'info');
   });
 
   testBtn.addEventListener('click', testLocalSlm);
-  suggestBtn.addEventListener('click', suggestModule);
+  runLocalSlmBtn.addEventListener('click', runSelectedLocalSlm);
   previewSuggestionBtn.addEventListener('click', previewValidatedSuggestion);
-  codeFoundryBtn.addEventListener('click', generateCodeArtifact);
 }
 
 if (document.readyState === 'loading') {

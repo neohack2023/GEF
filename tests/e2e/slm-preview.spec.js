@@ -50,7 +50,8 @@ test('validated Local SLM suggestion can use local defaults and preview in sandb
       return;
     }
 
-    generateRequestSeen = true;
+    const requestBody = route.request().postDataJSON();
+    generateRequestSeen = requestBody.model === 'llama3.2:3b';
     await route.fulfill({
       status: 200,
       headers: {
@@ -58,7 +59,7 @@ test('validated Local SLM suggestion can use local defaults and preview in sandb
         'content-type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama3.2:3b',
+        model: requestBody.model,
         response: JSON.stringify({
           schemaName: 'gef-module-suggestion',
           schemaVersion: 1,
@@ -91,18 +92,24 @@ test('validated Local SLM suggestion can use local defaults and preview in sandb
   await expect(modelStatus).toContainText('Code Foundry');
   await expect(modelStatus).toContainText('Heavier code repair');
 
+  await page.locator('#provider-local-task').selectOption('code-foundry');
+  await expect(page.locator('#provider-model')).toHaveValue('qwen2.5-coder:3b');
+  await page.locator('#provider-local-task').selectOption('module-suggestion');
+  await expect(page.locator('#provider-model')).toHaveValue('llama3.2:3b');
+
   await page.locator('#provider-test-ollama-btn').click();
   await expect(modelStatus).toContainText('Ollama reachable');
   await expect(modelStatus).toContainText('missing optional');
   expect(tagsRequestSeen).toBe(true);
 
   const previewButton = page.locator('#provider-preview-suggestion-btn');
-  await expect(previewButton).toBeDisabled();
+  await expect(previewButton).toBeHidden();
 
-  await page.locator('#provider-suggest-module-btn').click();
+  await page.locator('#provider-run-local-slm-btn').click();
 
-  await expect(page.locator('#local-slm-output')).toContainText('Validated suggestion: Spectral Grid');
-  await expect(page.locator('#local-slm-output')).toContainText('Use Preview Suggestion');
+  await expect(page.locator('#local-slm-output')).toContainText('Validated suggestion from llama3.2:3b: Spectral Grid');
+  await expect(page.locator('#local-slm-output')).toContainText('Preview Suggestion is now available');
+  await expect(previewButton).toBeVisible();
   await expect(previewButton).toBeEnabled();
   expect(generateRequestSeen).toBe(true);
 

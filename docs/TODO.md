@@ -18,6 +18,7 @@ This file is the human-readable task ledger for GEF.
 - [ ] Expand browser smoke coverage beyond Chromium boot and mocked Local SLM preview.
 - [ ] Gradually migrate browser modules from JavaScript to TypeScript after the Vite/TypeScript toolchain settles.
 - [ ] Add compile-smoke and sandbox-preview gates for generated Code Foundry artifacts after static validation proves stable.
+- [ ] Add checked-in examples from successful real local SLM smoke runs after human review.
 
 ## Done
 
@@ -33,3 +34,4 @@ This file is the human-readable task ledger for GEF.
 - [x] Add Playwright Chromium smoke tests for boot, sandbox panic, and mocked Local SLM Preview Suggestion.
 - [x] Add Code Foundry local SLM lane for validator-screened Canvas2D artifact generation.
 - [x] Add npm-driven local SLM setup menu for Ollama/model checks.
+- [x] Add real local SLM smoke runner for installed Ollama models.

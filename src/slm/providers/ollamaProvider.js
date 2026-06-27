@@ -1,6 +1,7 @@
 const DEFAULT_OLLAMA_BASE_URL = 'http://localhost:11434';
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
-const DEFAULT_TIMEOUT_MS = 18000;
+const DEFAULT_LIST_TIMEOUT_MS = 6000;
+const DEFAULT_GENERATE_TIMEOUT_MS = 90000;
 
 export const moduleSuggestionSchema = {
   type: 'object',
@@ -65,7 +66,7 @@ export function normalizeOllamaBaseUrl(endpoint = DEFAULT_OLLAMA_BASE_URL) {
   return url.toString().replace(/\/+$/, '');
 }
 
-function withTimeout(timeoutMs = DEFAULT_TIMEOUT_MS) {
+function withTimeout(timeoutMs) {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
   return { controller, timer };
@@ -86,7 +87,7 @@ function parseJsonObject(text) {
 
 export async function listOllamaModels({ endpoint } = {}) {
   const baseUrl = normalizeOllamaBaseUrl(endpoint);
-  const { controller, timer } = withTimeout(6000);
+  const { controller, timer } = withTimeout(DEFAULT_LIST_TIMEOUT_MS);
 
   try {
     const response = await fetch(`${baseUrl}/api/tags`, {
@@ -105,12 +106,20 @@ export async function listOllamaModels({ endpoint } = {}) {
   }
 }
 
-export async function generateOllamaJson({ endpoint, model, prompt, schema = moduleSuggestionSchema, temperature = 0.15, maxTokens = 220 } = {}) {
+export async function generateOllamaJson({
+  endpoint,
+  model,
+  prompt,
+  schema = moduleSuggestionSchema,
+  temperature = 0.15,
+  maxTokens = 220,
+  timeoutMs = DEFAULT_GENERATE_TIMEOUT_MS
+} = {}) {
   const baseUrl = normalizeOllamaBaseUrl(endpoint);
   const modelName = String(model || '').trim();
   if (!modelName) throw new Error('Ollama model name is required.');
 
-  const { controller, timer } = withTimeout();
+  const { controller, timer } = withTimeout(timeoutMs);
 
   try {
     const response = await fetch(`${baseUrl}/api/generate`, {
@@ -140,7 +149,7 @@ export async function generateOllamaJson({ endpoint, model, prompt, schema = mod
     };
   } catch (error) {
     if (error?.name === 'AbortError') {
-      throw new Error('Ollama request timed out. Confirm the model is pulled and the local service is running.');
+      throw new Error(`Ollama request timed out after ${Math.round(timeoutMs / 1000)}s. First local model load can take longer. Confirm Ollama is running, the model is pulled, or try again after it warms up.`);
     }
     throw error;
   } finally {
@@ -219,7 +228,7 @@ export function buildGeneratedVisualArtifactPrompt({ userPrompt, stage, diagnost
 
 export async function requestOllamaModuleSuggestion({ endpoint, model, userPrompt, stage, modules }) {
   const prompt = buildModuleSuggestionPrompt({ userPrompt, stage, modules });
-  return generateOllamaJson({ endpoint, model, prompt, schema: moduleSuggestionSchema });
+  return generateOllamaJson({ endpoint, model, prompt, schema: moduleSuggestionSchema, timeoutMs: DEFAULT_GENERATE_TIMEOUT_MS });
 }
 
 export async function requestOllamaGeneratedVisualArtifact({ endpoint, model, userPrompt, stage, diagnostics, priorCode }) {
@@ -230,6 +239,7 @@ export async function requestOllamaGeneratedVisualArtifact({ endpoint, model, us
     prompt,
     schema: generatedVisualArtifactSchema,
     temperature: 0.18,
-    maxTokens: 1300
+    maxTokens: 1300,
+    timeoutMs: DEFAULT_GENERATE_TIMEOUT_MS
   });
 }
