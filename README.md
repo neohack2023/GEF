@@ -27,6 +27,14 @@ npm run setup:slm
 
 The menu checks whether Ollama is installed, whether the local service responds, which GEF models are available, and can pull missing required models.
 
+To make the installed local SLMs do real validator-checked work from the command line, run:
+
+```bash
+npm run smoke:slm:local
+```
+
+That command uses live local Ollama responses, checks the required models, requests one curated-module suggestion from `llama3.2:3b`, requests one Code Foundry artifact from `qwen2.5-coder:3b`, and validates both without previewing or promoting output.
+
 Do not open `index.html` directly with `file://`. GEF uses browser ES modules, so direct file loading gives the page a `null` origin and modern browsers block module imports. Always use the npm-hosted local server.
 
 Useful scripts:
@@ -80,6 +88,7 @@ The current browser prototype includes:
 - local Ollama SLM suggestions for curated modules
 - split local SLM lane profiles for light helper and code foundry tasks
 - npm-driven SLM setup menu for Ollama and model checks
+- real local SLM smoke runner for installed Ollama models
 - static policy screening for generated visual code artifacts
 - Vite-hosted local development and build preview
 - TypeScript project configuration for gradual type adoption
