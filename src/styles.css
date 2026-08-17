@@ -17,6 +17,8 @@ canvas {
   display: block;
 }
 
+canvas[hidden] { display: none; }
+
 #main-canvas-2d { z-index: 1; pointer-events: none; }
 #three-d-canvas { z-index: 2; pointer-events: none; }
 #sandbox-canvas { z-index: 3; pointer-events: none; mix-blend-mode: screen; }
