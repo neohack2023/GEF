@@ -1,6 +1,6 @@
 # GEF Current Status
 
-Last updated after adding the local Ollama SLM suggestion lane.
+Last updated after adding the governed adaptive 3D renderer slice.
 
 This file is the quick handoff note for where the repo currently stands. Deeper design rules live in the specific docs; this page is the dashboard sticky note.
 
@@ -14,7 +14,7 @@ Models may suggest. Validators decide. Users promote.
 
 ## Current verification state
 
-GEF is partially smoke-tested but does not have an automated browser test harness yet.
+GEF is partially smoke-tested and now has a Chromium Playwright harness, but broader device and browser verification remains pending.
 
 Observed so far:
 
@@ -26,7 +26,7 @@ Observed so far:
 - Studio, Foundry, and Library tabs switch.
 - Laptop Edge showed browser/CSP-style behavior around `blob:` media and a stale/optional Pyodide source-map request.
 - Full local laptop smoke testing is still pending.
-- Playwright or other automated browser tests are not implemented yet.
+- Playwright covers boot, sandbox recovery, mocked Local SLM preview, and the adaptive 3D fallback/fail-closed paths.
 - Repo-side scripts exist for local static serving, syntax checks, and a small security scan.
 - GitHub Actions rails now exist for Node CI, CI failure issue reporting, and PR handoff packets.
 - Foundry has provider settings for local SLM endpoints and user-controlled LLM proxy endpoints.
@@ -42,6 +42,27 @@ Proceed carefully from a partially smoke-tested foundation.
 ---
 
 ## Recently completed
+
+### ✅ Adaptive WebGPU/WebGL2 3D sandbox lane added
+
+What changed:
+
+- Added a curated `Bass Tunnel 3D` audio-reactive visualization.
+- Added WebGPU as the preferred renderer and WebGL2 as the fallback.
+- Added explicit `auto`, `webgpu`, and `webgl2` backend selection.
+- Kept Canvas2D as the stable main renderer.
+- Kept 3D sandbox-only with no generated shader execution or automatic promotion.
+- Added bounded geometry, device-pixel-ratio limits, backend diagnostics, resource disposal, and panic recovery.
+- Added Node contract smoke coverage and Playwright fallback/unavailable-API coverage.
+- Added 3D frames to the existing composite snapshot/recording path.
+
+Still pending before promotion beyond sandbox:
+
+- CI verification of the new branch
+- manual WebGPU device verification
+- cross-browser composite capture verification
+- performance receipts on mobile and integrated GPUs
+- context/device-loss recovery beyond fail-closed return to Canvas2D
 
 ### ✅ Local Ollama SLM suggestion lane added
 

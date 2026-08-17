@@ -2,7 +2,7 @@
 
 GEF should support a dedicated 3D visualization lane alongside the current Canvas2D lane.
 
-This is a planning note, not an implemented runtime contract.
+The first governed implementation slice is now present. This document remains the lane contract and roadmap for expanding it.
 
 Core rule:
 
@@ -27,6 +27,26 @@ Use it for:
 - future WebGL or WebGPU-backed visual modules
 
 Do not use it to bypass the safe renderer, sandbox, or validation model.
+
+## Implemented first slice
+
+The repository now includes:
+
+- `src/render/adaptive3dRuntime.js` — capability router and fail-closed lifecycle
+- `src/render/webgpu3dRuntime.js` — preferred WGSL/WebGPU renderer
+- `src/render/webgl3dRuntime.js` — GLSL/WebGL2 fallback renderer
+- `src/render/threeModuleRegistry.js` — curated 3D module metadata and sandbox validation
+- `src/render/threeSceneGeometry.js` — bounded tunnel geometry and normalized audio uniforms
+- `tools/three-runtime-smoke.mjs` — registry, safety, bounds, and numerical contract checks
+- `tests/e2e/three-renderer.spec.js` — fallback, panic recovery, and unavailable-API coverage
+
+Current backend order:
+
+```text
+AUTO -> WebGPU -> WebGL2 -> fail closed to stable Canvas2D
+```
+
+The first module is `bassTunnel3d`. It is curated, has fixed geometry limits, uses no remote assets, accepts only existing normalized audio metrics, and cannot be promoted to the main renderer in this slice.
 
 ---
 
@@ -173,14 +193,15 @@ Possible implementation tracks:
 | WebGL 3D | Real geometry and particles | Requires context loss handling, shader diagnostics, cleanup. |
 | WebGPU 3D | Future compute-heavy visuals | Must remain optional and feature-detected. |
 
-Recommended order:
+Implementation order:
 
-1. Prototype depth concepts as curated Canvas2D pseudo-3D modules.
-2. Formalize runtime/stage metadata in the module registry.
-3. Add a sandbox-only 3D runtime adapter.
-4. Add browser support diagnostics.
-5. Add tests for unsupported contexts and panic reset.
-6. Only then allow model-assisted 3D suggestions.
+1. ✅ Formalize runtime/stage metadata in the module registry.
+2. ✅ Add a sandbox-only adaptive WebGPU/WebGL2 runtime.
+3. ✅ Add browser support diagnostics and explicit backend selection.
+4. ✅ Add tests for unsupported contexts, discard, and panic reset.
+5. Validate composite capture across target browsers and devices.
+6. Add more curated modules only after performance receipts exist.
+7. Only then allow model-assisted 3D suggestions.
 
 ---
 
@@ -212,13 +233,13 @@ Audio metrics should stay stable before 3D behavior gets clever.
 
 Minimum tests before any 3D lane becomes normal UI:
 
-- app boots when 3D APIs are unavailable
-- lane selector reports unsupported browser state clearly
-- sandbox preview can enable and discard a 3D module
-- panic reset clears 3D scene state and returns to Canvas2D
+- [x] app boots when 3D APIs are unavailable
+- [x] lane selector reports unsupported browser state clearly
+- [x] sandbox preview can enable and discard a 3D module
+- [x] panic reset clears 3D scene state and returns to Canvas2D
 - recording/snapshot path still captures the expected composite canvas
-- memory/dataset rows record the lane as `3d` or `canvas2d`
-- no provider output executes as 3D code
+- [x] memory/dataset rows record the lane and selected backend
+- [x] no provider output executes as 3D code
 
 Do not add 3D without recovery tests. Depth is not an excuse to dig a pit under the renderer.
 

@@ -71,6 +71,8 @@ GEF is being built so the system can eventually learn from creative feedback whi
 The current browser prototype includes:
 
 - Canvas2D rendering runtime
+- sandbox-only adaptive 3D renderer with WebGPU preference and WebGL2 fallback
+- curated audio-reactive `Bass Tunnel 3D` visualization with bounded geometry
 - audio-reactive metrics for bass, mid, treble, beat, glitch, centroid, and RMS
 - sandbox/main preview separation
 - preset save/load support
@@ -87,7 +89,7 @@ The current browser prototype includes:
 - snapshot and WebM capture paths
 - documentation for architecture, safety, memory, datasets, presets, and testing
 
-Future work can add WebGL, WebGPU/WGSL, Pyodide, browser-local SLMs, cloud LLM adapters, and stronger dataset tooling through the adapter and validation model described in the docs.
+Future work can expand the first governed WebGL2/WebGPU 3D lane, add Pyodide, browser-local SLMs, cloud LLM adapters, and stronger dataset tooling through the adapter and validation model described in the docs.
 
 ## Documentation map
 
