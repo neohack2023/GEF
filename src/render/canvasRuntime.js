@@ -23,11 +23,20 @@ function summarizeModule(moduleDef) {
 }
 
 export class CanvasRuntime {
-  constructor({ mainCanvas, sandboxCanvas, feedbackCanvas, compositeCanvas }) {
+  constructor({
+    mainCanvas,
+    sandboxCanvas,
+    feedbackCanvas,
+    compositeCanvas,
+    externalSandboxCanvasProvider = null,
+    onSandboxModulePreview = null
+  }) {
     this.mainCanvas = mainCanvas;
     this.sandboxCanvas = sandboxCanvas;
     this.feedbackCanvas = feedbackCanvas;
     this.compositeCanvas = compositeCanvas;
+    this.externalSandboxCanvasProvider = externalSandboxCanvasProvider;
+    this.onSandboxModulePreview = onSandboxModulePreview;
 
     this.mainCtx = mainCanvas.getContext('2d');
     this.sandboxCtx = sandboxCanvas.getContext('2d');
@@ -87,7 +96,9 @@ export class CanvasRuntime {
   }
 
   setSandboxModule(moduleId) {
-    this.sandboxModuleId = isCanvas2dModule(getModuleById(moduleId)) ? moduleId : null;
+    const nextModuleId = isCanvas2dModule(getModuleById(moduleId)) ? moduleId : null;
+    if (nextModuleId) this.onSandboxModulePreview?.(nextModuleId);
+    this.sandboxModuleId = nextModuleId;
   }
 
   setSandboxActive(isActive) {
@@ -150,6 +161,10 @@ export class CanvasRuntime {
     this.resize(w, h);
     this.compositeCtx.clearRect(0, 0, w, h);
     this.compositeCtx.drawImage(this.mainCanvas, 0, 0);
+    const externalSandboxCanvas = this.externalSandboxCanvasProvider?.();
+    if (externalSandboxCanvas?.dataset.active === 'true') {
+      this.compositeCtx.drawImage(externalSandboxCanvas, 0, 0, w, h);
+    }
     if (this.sandboxActive) {
       this.compositeCtx.drawImage(this.sandboxCanvas, 0, 0);
     }

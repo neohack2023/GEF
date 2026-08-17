@@ -63,6 +63,18 @@
       </div>
       <div class="tiny-note" style="margin-bottom:10px;">Safe preview lane for curated modules and future adapter work.</div>
       <div class="flex-row" style="margin-bottom:8px;"><select id="sandbox-preview-mode" style="margin:0;"><option value="AUTO" selected>Preview Mode: Auto</option><option value="STACK">Preview Mode: Stack Only</option><option value="REPLACE">Preview Mode: Force Base Replace</option></select></div>
+      <div class="three-lane-controls">
+        <div class="tiny-note"><strong>3D adapter:</strong> curated sandbox scene with capability fallback.</div>
+        <div class="flex-row" style="margin:8px 0;">
+          <select id="three-backend" style="margin:0;">
+            <option value="auto" selected>3D Backend: Auto</option>
+            <option value="webgpu">3D Backend: WebGPU</option>
+            <option value="webgl2">3D Backend: WebGL2</option>
+          </select>
+          <button id="preview-three-btn" class="btn-small btn-magic">Preview Bass Tunnel 3D</button>
+        </div>
+        <div id="three-status" class="tiny-note" data-state="idle">3D lane idle. Canvas2D remains stable.</div>
+      </div>
       <div class="flex-row"><button id="promote-sandbox-btn" class="btn-small btn-good" style="display:none;">Commit to Main</button><button id="discard-sandbox-btn" class="btn-small" style="display:none;">Discard</button></div>
       <div id="diagnostics-log" style="display:none;"><div class="diag-info">Sandbox initialized.</div></div>
     </div>
@@ -151,9 +163,8 @@
 </div>
 
 <div id="status-bar">Engines Waking Up...</div>
-<canvas id="gpu-canvas" style="display:none;"></canvas>
-<canvas id="glsl-canvas" style="display:none;"></canvas>
 <canvas id="main-canvas-2d"></canvas>
+<canvas id="three-d-canvas" hidden aria-label="3D sandbox preview"></canvas>
 <canvas id="sandbox-canvas"></canvas>
 <canvas id="feedback-buffer"></canvas>
 <canvas id="composite-canvas"></canvas>

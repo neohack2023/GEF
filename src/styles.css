@@ -17,9 +17,11 @@ canvas {
   display: block;
 }
 
-#gpu-canvas, #glsl-canvas { z-index: 0; }
+canvas[hidden] { display: none; }
+
 #main-canvas-2d { z-index: 1; pointer-events: none; }
-#sandbox-canvas { z-index: 2; pointer-events: none; mix-blend-mode: screen; }
+#three-d-canvas { z-index: 2; pointer-events: none; }
+#sandbox-canvas { z-index: 3; pointer-events: none; mix-blend-mode: screen; }
 #composite-canvas, #feedback-buffer { display: none; }
 
 #ui-layer {
@@ -171,6 +173,9 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance
 .sandbox-panel { margin-bottom: 14px; padding: 12px; border-radius: 10px; border: 1px solid rgba(247,183,51,.38); background: rgba(247,183,51,.05); transition: .18s; }
 .sandbox-panel.active { background: rgba(247,183,51,.14); box-shadow: 0 0 18px rgba(247,183,51,.15); border-color: #f7b733; }
 .sandbox-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid rgba(247,183,51,.18); }
+.three-lane-controls { margin: 8px 0; padding: 9px; border: 1px solid rgba(168,85,247,.28); border-radius: 8px; background: rgba(168,85,247,.06); }
+#three-status[data-state="active"] { color: #00ff88; }
+#three-status[data-state="error"] { color: #ff6b7d; }
 
 #diagnostics-log {
   max-height: 110px;

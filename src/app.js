@@ -1,5 +1,6 @@
 import { AudioAnalyzer } from './audio/analyzer.js';
 import { CanvasRuntime } from './render/canvasRuntime.js';
+import { Adaptive3dRuntime, THREE_BACKENDS } from './render/adaptive3dRuntime.js';
 import { moduleCatalog } from './render/visualModules.js';
 import {
   getPresets,
@@ -29,12 +30,30 @@ const JSONL_IMPORT_LIMITS = {
 
 const sessionId = crypto.randomUUID ? crypto.randomUUID() : `gef-${Date.now()}`;
 const audio = new AudioAnalyzer();
+const threeRuntime = new Adaptive3dRuntime($('three-d-canvas'), {
+  onDiagnostic: (message, severity) => writeDiagnostic(
+    message,
+    severity === 'error' ? 'diag-err' : severity === 'warning' ? 'diag-warn' : 'diag-info'
+  ),
+  onDeactivated: (details) => handleThreeRuntimeDeactivated(details)
+});
 const runtime = new CanvasRuntime({
   mainCanvas: $('main-canvas-2d'),
   sandboxCanvas: $('sandbox-canvas'),
   feedbackCanvas: $('feedback-buffer'),
-  compositeCanvas: $('composite-canvas')
+  compositeCanvas: $('composite-canvas'),
+  externalSandboxCanvasProvider: () => threeRuntime.canvas,
+  onSandboxModulePreview: () => {
+    const wasInitializing = threeRuntime.initializing;
+    threeRuntime.deactivate();
+    if (wasInitializing) {
+      $('three-status').dataset.state = 'idle';
+      $('three-status').textContent = '3D initialization cancelled. Canvas2D preview selected.';
+    }
+  }
 });
+
+window.GEF_3D_RUNTIME = Object.freeze({ getStatus: () => threeRuntime.getStatus() });
 
 let globalTime = 0;
 let lastFrameTime = performance.now();
@@ -66,6 +85,20 @@ function logTelemetry(eventType, payload = {}) {
     ...payload
   });
   $('dataset-count').innerText = rows.length;
+}
+
+function handleThreeRuntimeDeactivated({ reason, lastError }) {
+  runtime.setSandboxActive(false);
+  $('sandbox-toggle').checked = false;
+  $('three-status').dataset.state = 'error';
+  $('three-status').textContent = `3D renderer stopped (${reason}). Canvas2D restored.`;
+  updateSandboxUi();
+  setStatus('3D renderer stopped. Canvas2D restored.', false, 3000);
+  logTelemetry('THREE_RUNTIME_DEACTIVATED', {
+    lane: '3d',
+    reason,
+    error: lastError || 'unknown'
+  });
 }
 
 function bindSliderValue(sliderId, labelId) {
@@ -132,7 +165,7 @@ function updateSandboxUi() {
   $('sandbox-container').classList.toggle('active', runtime.sandboxActive);
   $('panic-btn').style.display = runtime.sandboxActive ? 'block' : 'none';
   $('promote-sandbox-btn').style.display = runtime.sandboxActive && runtime.sandboxModuleId ? 'block' : 'none';
-  $('discard-sandbox-btn').style.display = runtime.sandboxActive && runtime.sandboxModuleId ? 'block' : 'none';
+  $('discard-sandbox-btn').style.display = runtime.sandboxActive && (runtime.sandboxModuleId || threeRuntime.active) ? 'block' : 'none';
   $('diagnostics-log').style.display = runtime.sandboxActive ? 'block' : 'none';
   renderModuleStack();
 }
@@ -149,8 +182,8 @@ function writeDiagnostic(message, type = 'diag-info') {
 function renderCodeViewer(format = 'js') {
   const samples = {
     js: `// Safe module preview\n// This build does not execute arbitrary code yet.\n// Use curated modules while the compiler adapter is split into a reviewed layer.`,
-    wgsl: `// WGSL adapter planned\n// WebGPU base rendering will be restored behind a dedicated compiler module.`,
-    glsl: `// GLSL adapter planned\n// WebGL shader compilation will live in src/render/glslRuntime.js.`,
+    wgsl: `// Governed WebGPU 3D adapter active\n// Curated WGSL lives in src/render/webgpu3dRuntime.js.\n// Provider-generated shaders remain untrusted text.`,
+    glsl: `// Governed WebGL2 3D fallback active\n// Curated GLSL lives in src/render/webgl3dRuntime.js.\n// Provider-generated shaders remain untrusted text.`,
     python: `# Python/Pyodide adapter planned\n# Pyodide is intentionally staged out of this safe foundation.`
   };
   $('code-viewer').value = samples[format] || samples.js;
@@ -410,6 +443,11 @@ function bindUi() {
 
   $('sandbox-toggle').addEventListener('change', (event) => {
     runtime.setSandboxActive(event.target.checked);
+    if (!event.target.checked && (threeRuntime.active || threeRuntime.initializing)) {
+      threeRuntime.deactivate();
+      $('three-status').dataset.state = 'idle';
+      $('three-status').textContent = '3D preview disabled. Canvas2D remains stable.';
+    }
     updateSandboxUi();
     if (runtime.sandboxActive) writeDiagnostic('Switched to experimental runtime context.');
     setStatus(runtime.sandboxActive ? 'SANDBOX RUNTIME ACTIVE' : 'STABLE ENGINE ACTIVE', runtime.sandboxActive);
@@ -417,19 +455,68 @@ function bindUi() {
 
   $('sandbox-preview-mode').addEventListener('change', (event) => runtime.setPreviewMode(event.target.value));
 
+  $('preview-three-btn').addEventListener('click', async () => {
+    const button = $('preview-three-btn');
+    const status = $('three-status');
+    button.disabled = true;
+    status.dataset.state = 'loading';
+    status.textContent = 'Initializing governed 3D sandbox lane...';
+    runtime.setSandboxModule(null);
+    const result = await threeRuntime.preview('bassTunnel3d', $('three-backend').value || THREE_BACKENDS.AUTO);
+    button.disabled = false;
+
+    if (result.cancelled) {
+      if (status.dataset.state === 'loading') {
+        status.dataset.state = 'idle';
+        status.textContent = '3D initialization cancelled. Canvas2D remains stable.';
+      }
+      return;
+    }
+
+    if (!result.ok) {
+      runtime.setSandboxActive(false);
+      $('sandbox-toggle').checked = false;
+      status.dataset.state = 'error';
+      status.textContent = `3D unavailable: ${result.error}`;
+      updateSandboxUi();
+      setStatus('3D preview unavailable. Canvas2D remained active.', false, 3000);
+      logTelemetry('THREE_PREVIEW_REJECTED', { lane: '3d', reason: result.error });
+      return;
+    }
+
+    runtime.setSandboxActive(true);
+    $('sandbox-toggle').checked = true;
+    status.dataset.state = 'active';
+    status.textContent = `Bass Tunnel 3D active via ${result.backend.toUpperCase()}. Sandbox only.`;
+    updateSandboxUi();
+    setStatus(`3D SANDBOX ACTIVE · ${result.backend.toUpperCase()}`, true);
+    logTelemetry('THREE_PREVIEW_ACTIVE', {
+      lane: '3d',
+      backend: result.backend,
+      module_id: result.module.id,
+      promotion_state: 'sandbox'
+    });
+  });
+
   $('panic-btn').addEventListener('click', () => {
+    threeRuntime.deactivate();
     runtime.setSandboxModule(null);
     runtime.setSandboxActive(false);
     $('sandbox-toggle').checked = false;
     updateSandboxUi();
+    $('three-status').dataset.state = 'idle';
+    $('three-status').textContent = '3D lane idle. Canvas2D remains stable.';
     writeDiagnostic('PANIC reset triggered. Sandbox module cleared.', 'diag-err');
     setStatus('Sandbox panic reset complete.', false, 1800);
   });
 
   $('discard-sandbox-btn').addEventListener('click', () => {
+    threeRuntime.deactivate();
     runtime.setSandboxModule(null);
     writeDiagnostic('Sandbox discarded.', 'diag-warn');
     updateSandboxUi();
+    $('three-status').dataset.state = 'idle';
+    $('three-status').textContent = '3D preview discarded. Canvas2D remains stable.';
   });
 
   $('promote-sandbox-btn').addEventListener('click', () => {
@@ -767,6 +854,7 @@ function renderEngine() {
   const metrics = audio.update(glitchThreshold, audioSense);
   updateMeters(metrics);
   runtime.render(window.innerWidth, window.innerHeight, globalTime, metrics);
+  threeRuntime.render(window.innerWidth, window.innerHeight, globalTime, metrics);
 
   if (isRecording) {
     runtime.drawComposite(window.innerWidth, window.innerHeight);
