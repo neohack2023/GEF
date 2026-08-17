@@ -48,3 +48,20 @@ test('missing GPU APIs fail closed without disturbing the stable renderer', asyn
   await expect(page.locator('#main-canvas-2d')).toBeVisible();
   await expect(page.locator('#status-bar')).toContainText('3D preview unavailable');
 });
+
+test('WebGL2 context loss restores Canvas2D and synchronizes sandbox controls', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#three-backend').selectOption('webgl2');
+  await page.locator('#preview-three-btn').click();
+  await expect(page.locator('#three-status')).toHaveAttribute('data-state', 'active');
+
+  await page.locator('#three-d-canvas').evaluate((canvas) => {
+    canvas.dispatchEvent(new globalThis.Event('webglcontextlost', { cancelable: true }));
+  });
+
+  await expect(page.locator('#three-d-canvas')).toBeHidden();
+  await expect(page.locator('#sandbox-toggle')).not.toBeChecked();
+  await expect(page.locator('#three-status')).toHaveAttribute('data-state', 'error');
+  await expect(page.locator('#three-status')).toContainText('Canvas2D restored');
+  await expect(page.locator('#status-bar')).toContainText('3D renderer stopped');
+});

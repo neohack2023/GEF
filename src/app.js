@@ -34,7 +34,8 @@ const threeRuntime = new Adaptive3dRuntime($('three-d-canvas'), {
   onDiagnostic: (message, severity) => writeDiagnostic(
     message,
     severity === 'error' ? 'diag-err' : severity === 'warning' ? 'diag-warn' : 'diag-info'
-  )
+  ),
+  onDeactivated: (details) => handleThreeRuntimeDeactivated(details)
 });
 const runtime = new CanvasRuntime({
   mainCanvas: $('main-canvas-2d'),
@@ -42,7 +43,14 @@ const runtime = new CanvasRuntime({
   feedbackCanvas: $('feedback-buffer'),
   compositeCanvas: $('composite-canvas'),
   externalSandboxCanvasProvider: () => threeRuntime.canvas,
-  onSandboxModulePreview: () => threeRuntime.deactivate()
+  onSandboxModulePreview: () => {
+    const wasInitializing = threeRuntime.initializing;
+    threeRuntime.deactivate();
+    if (wasInitializing) {
+      $('three-status').dataset.state = 'idle';
+      $('three-status').textContent = '3D initialization cancelled. Canvas2D preview selected.';
+    }
+  }
 });
 
 window.GEF_3D_RUNTIME = Object.freeze({ getStatus: () => threeRuntime.getStatus() });
@@ -77,6 +85,20 @@ function logTelemetry(eventType, payload = {}) {
     ...payload
   });
   $('dataset-count').innerText = rows.length;
+}
+
+function handleThreeRuntimeDeactivated({ reason, lastError }) {
+  runtime.setSandboxActive(false);
+  $('sandbox-toggle').checked = false;
+  $('three-status').dataset.state = 'error';
+  $('three-status').textContent = `3D renderer stopped (${reason}). Canvas2D restored.`;
+  updateSandboxUi();
+  setStatus('3D renderer stopped. Canvas2D restored.', false, 3000);
+  logTelemetry('THREE_RUNTIME_DEACTIVATED', {
+    lane: '3d',
+    reason,
+    error: lastError || 'unknown'
+  });
 }
 
 function bindSliderValue(sliderId, labelId) {
@@ -421,7 +443,7 @@ function bindUi() {
 
   $('sandbox-toggle').addEventListener('change', (event) => {
     runtime.setSandboxActive(event.target.checked);
-    if (!event.target.checked && threeRuntime.active) {
+    if (!event.target.checked && (threeRuntime.active || threeRuntime.initializing)) {
       threeRuntime.deactivate();
       $('three-status').dataset.state = 'idle';
       $('three-status').textContent = '3D preview disabled. Canvas2D remains stable.';
@@ -442,6 +464,14 @@ function bindUi() {
     runtime.setSandboxModule(null);
     const result = await threeRuntime.preview('bassTunnel3d', $('three-backend').value || THREE_BACKENDS.AUTO);
     button.disabled = false;
+
+    if (result.cancelled) {
+      if (status.dataset.state === 'loading') {
+        status.dataset.state = 'idle';
+        status.textContent = '3D initialization cancelled. Canvas2D remains stable.';
+      }
+      return;
+    }
 
     if (!result.ok) {
       runtime.setSandboxActive(false);
